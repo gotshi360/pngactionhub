@@ -9,13 +9,13 @@ action:
 
   version: 1
   id: "ap::maintenance::workspace"
-  category: "dcc/blender/workspace"
+  category: "dcc/workspace/message"
   type: python
   enable: false
   author: "Anchorpoint Software GmbH"
   description: "An example action that shows up as a button in the workspace / project overview"
 
-  script: workspace_message.py
+  script: "workspace_message.py"
 
   register:
     workspace_overview:

@@ -7,22 +7,23 @@ version: "1.0"
 
 action:
   #Must Have Properties
-  name: "Important Message"
+  name: "Important Message Workspace"
 
   #Optional Properties
   version: 1
-  id: "ap::package::maintenance"
-  category: "dcc/blender"
+  id: "ap::package::maintenanceworkspace"
+  category: "dcc/workspace"
   type: package
   enable: false
-  description: A message for maintenance shown in the sidebar
+  description: A message for maintenance shown in the workspace
 
   author: "Anchorpoint Software GmbH"
   icon:
     path: "codingExamples.svg"
 
   actions:
-    - ap::maintenance::sidebar
+    - ap::maintenance::workspace
+  
 
 
     
