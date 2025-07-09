@@ -26,3 +26,5 @@ action:
   register:
     sidebar:
       enable: true
+    workspace_overview:
+      enable: true  
