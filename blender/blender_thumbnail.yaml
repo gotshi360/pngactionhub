@@ -7,7 +7,7 @@ version: "1.0"
 
 action:
   #Must Have Properties
-  name: "IMPORTANT MESSAGE"
+  name: "MAINTENANCE"
 
   #Optional Properties
   version: 1
