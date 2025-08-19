@@ -1,13 +1,21 @@
+# Anchorpoint Markup Language
+# Full documentation: https://docs.anchorpoint.app/docs/actions/create-actions
+
 version: 1.0
-name: "Startup Notification"
-id: "ap::startup_notification"
-type: python
-enable: true
-script: "startup_notification.py"
-settings: "startup_notification_settings.py"
+action:
+  name: "Startup Notification"
 
-python_packages: []
+  version: 1
+  id: "user::startup_notification"
+  category: user
+  type: python
+  enable: true
+  author: "Your Name"
+  description: "Shows a configurable toast on every app start (with 'Don't show again today')."
 
-register:
-  sidebar:
-    enable: true
+  script: "startup_notification.py"
+  settings: "startup_notification_settings.py"
+
+  register:
+    sidebar:
+      enable: true
