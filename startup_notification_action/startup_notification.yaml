@@ -1,0 +1,13 @@
+version: 1.0
+name: "Startup Notification"
+id: "ap::startup_notification"
+type: python
+enable: true
+script: "startup_notification.py"
+settings: "startup_notification_settings.py"
+
+python_packages: []
+
+register:
+  sidebar:
+    enable: true
