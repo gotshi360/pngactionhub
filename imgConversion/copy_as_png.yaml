@@ -7,7 +7,7 @@ version: "1.0"
 
 action: 
   #Must Have Properties
-  name: "Copy as PNG"
+  name: "Convert to PNG"
 
   #Optional Properties
   version: 1
@@ -16,7 +16,7 @@ action:
   type: python
   enable: true
   author: "Anchorpoint Software GmbH"
-  description: "This command takes an image, converts it to png and copies the bitmap to clipboard"
+  description: "This command takes one or multiple images, converts it to png and copies the bitmap to the location of the source image"
   icon:
     path: "icons/copyImage.svg"
     
