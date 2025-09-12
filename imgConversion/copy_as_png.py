@@ -1,52 +1,71 @@
-# This example demonstrates how to create a simple dialog in Anchorpoint
+# CHAT GPT PROMPT:
+# Ez a script képekből készít PNG másolatokat, amiket vágólapra másol.
+# Most módosítottuk, hogy a PNG-t a forrásfájl könyvtárába is elmentse, és több kijelölt fájlt is kezeljen.
+
 import anchorpoint as ap
 import apsync as aps
 import os
 import tempfile
+import shutil
 
+def create_temp_directory():
+    return tempfile.mkdtemp()
 
-def get_image(workspace_id, input_path):
-    # start progress
-    progress = ap.Progress("Copying image", "Processing", infinite=True)
-    # create temporary folder
-    output_folder = create_temp_directory()
-
-    # generate the thumbnail which is a png file and put it in the temporary directory
+def process_image(workspace_id, input_path, temp_dir):
+    file_name = os.path.splitext(os.path.basename(input_path))[0]
+    
+    # PNG generálása ideiglenes könyvtárba
     aps.generate_thumbnails(
         [input_path],
-        output_folder,
+        temp_dir,
         with_detail=True,
         with_preview=False,
         workspace_id=workspace_id,
     )
 
-    # get the proper filename, rename it because the generated PNG file has a _pt appendix
-    file_name = os.path.basename(input_path).split(".")[0]
-    image_path = os.path.join(output_folder, file_name + str("_dt") + str(".png"))
+    # PNG fájl elérési útja (_dt appendix-cel)
+    generated_file = os.path.join(temp_dir, file_name + "_dt.png")
 
-    if not os.path.exists(image_path):
-        ap.UI().show_error(
-            "Cannot copy to clipboard", "PNG file could not be generated"
-        )
-        progress.finish()
-        return
+    if not os.path.exists(generated_file):
+        print(f"HIBA: {generated_file} nem található.")
+        return None
 
-    renamed_image_path = os.path.join(output_folder, file_name + str(".png"))
-    os.rename(image_path, renamed_image_path)
+    # Átnevezés _dt nélkülire (vizuálisan szebb)
+    renamed_file = os.path.join(temp_dir, file_name + ".png")
+    os.rename(generated_file, renamed_file)
 
-    # trigger the copy to clipboard function
-    ap.copy_files_to_clipboard([renamed_image_path])
+    print(f"PNG létrehozva: {renamed_file}")
+    return renamed_file
 
-    ap.UI().show_success("Image copied to clipboard", "Paste it as a PNG file")
+def get_images(workspace_id, file_paths):
+    progress = ap.Progress("PNG generálás", "Folyamatban...", infinite=False)
+    ui = ap.UI()
+
+    temp_dir = create_temp_directory()
+    png_paths = []
+
+    total = len(file_paths)
+    for i, input_path in enumerate(file_paths):
+        print(f"Feldolgozás: {input_path}")
+        png_path = process_image(workspace_id, input_path, temp_dir)
+
+        if png_path:
+            # PNG másolása az eredeti könyvtárba
+            destination_path = os.path.join(os.path.dirname(input_path), os.path.basename(png_path))
+            shutil.copyfile(png_path, destination_path)
+            print(f"Másolva ide: {destination_path}")
+            png_paths.append(png_path)
+
+        progress.report_progress((i + 1) / total)
+
+    # Vágólapra másolás, ha legalább egy PNG sikerült
+    if png_paths:
+        ap.copy_files_to_clipboard(png_paths)
+        ui.show_success("PNG másolatok létrehozva", f"{len(png_paths)} fájl másolva a vágólapra és mappába.")
+    else:
+        ui.show_error("Hiba", "Egyik fájlból sem sikerült PNG-t generálni.")
 
     progress.finish()
 
-
-def create_temp_directory():
-    # Create a temporary directory
-    temp_dir = tempfile.mkdtemp()
-    return temp_dir
-
-
 ctx = ap.get_context()
-ctx.run_async(get_image, ctx.workspace_id, ctx.path)
+ctx.run_async(get_images, ctx.workspace_id, ctx.selected_files)
