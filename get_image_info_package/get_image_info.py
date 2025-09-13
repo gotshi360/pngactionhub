@@ -8,11 +8,19 @@ def extract_image_info(file_path):
     suffix = file_path.lower().split('.')[-1]
 
     try:
-        with Image.open(file_path) as img:
-            width, height = img.size
-        return {
-            "Dimensions": f"{width} x {height}"
-        }
+        if suffix == "psb":
+            from psd_tools import PSDImage
+            psb = PSDImage.open(file_path)
+            width, height = psb.size
+            return {
+                "Dimensions": f"{width} x {height}"
+            }
+        else:
+            with Image.open(file_path) as img:
+                width, height = img.size
+            return {
+                "Dimensions": f"{width} x {height}"
+            }
     except Exception as e:
         print(f"Error reading image {file_path}: {e}")
         return {}
