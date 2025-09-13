@@ -8,6 +8,6 @@ script: "export_attributes_to_csv.py"
 
 register:
   file:
-    filter: "*.*"
+    enable: true
   folder:
-    filter: "*"
+    enable: true
