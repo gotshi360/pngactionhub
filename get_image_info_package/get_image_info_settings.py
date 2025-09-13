@@ -1,6 +1,3 @@
-# CHAT GPT PROMPT:
-# Ez a settings script egy dialogot jelenít meg, ahol a user kiválaszthatja, mely kép metaadatokat szeretné beállítani attribútumként.
-
 import anchorpoint as ap
 import apsync as aps
 
@@ -19,9 +16,9 @@ def store_settings(dialog: ap.Dialog):
 dialog = ap.Dialog()
 dialog.title = "Get Image Info Settings"
 
-dialog.add_checkbox("Show Dimensions", var="show_dimensions", checked=settings.get("show_dimensions", True))
-dialog.add_checkbox("Show Resolution", var="show_resolution", checked=settings.get("show_resolution", True))
-dialog.add_checkbox("Show Bit Depth", var="show_bit_depth", checked=settings.get("show_bit_depth", True))
+dialog.add_checkbox("Show Dimensions", settings.get("show_dimensions", True), var="show_dimensions")
+dialog.add_checkbox("Show Resolution", settings.get("show_resolution", True), var="show_resolution")
+dialog.add_checkbox("Show Bit Depth", settings.get("show_bit_depth", True), var="show_bit_depth")
 
 dialog.add_button("Save", callback=store_settings)
 

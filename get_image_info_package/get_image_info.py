@@ -1,7 +1,3 @@
-# CHAT GPT PROMPT: 
-# Ez az action kinyeri a kiválasztott kép fájlok (PNG, JPG, PSD, PSB) metadatait: Dimensions, Resolution, Bit Depth.
-# A Settings dialog checkboxai alapján állítja be az Anchorpoint attribútumokat.
-
 import anchorpoint as ap
 import apsync as aps
 from PIL import Image
@@ -21,19 +17,19 @@ def extract_image_info(file_path):
             with Image.open(file_path) as img:
                 width, height = img.size
                 resolution = img.info.get("dpi", (72, 72))[0]
-                bit_depth = len(img.getbands()) * img.bits
+                mode_to_bits = {
+                    "1": 1, "L": 8, "P": 8, "RGB": 24, "RGBA": 32,
+                    "CMYK": 32, "I": 32, "F": 32
+                }
+                bit_depth = mode_to_bits.get(img.mode, "Unknown")
         return f"{width} x {height}", f"{int(resolution)} dpi", f"{bit_depth}-bit"
     except Exception as e:
         print(f"Error reading {file_path}: {e}")
         return None, None, None
 
-def set_attributes(ctx, dimensions, resolution, bit_depth, settings):
+def set_attributes(ctx, file_path, dimensions, resolution, bit_depth, settings):
     api = aps.get_api()
     api.set_workspace(ctx.workspace_id)
-    project = api.get_project()
-    if not project:
-        print("No project found")
-        return
 
     attributes_to_set = []
 
@@ -48,7 +44,7 @@ def set_attributes(ctx, dimensions, resolution, bit_depth, settings):
         print(f"Setting attribute {name}: {value}")
         if value is None:
             continue
-        api.attributes.set_attribute_value(ctx.path, name, value)
+        api.attributes.set_attribute_value(file_path, name, value)
 
 def main():
     ctx = ap.get_context()
@@ -63,7 +59,7 @@ def main():
 
     for file in ctx.selected_files:
         dimensions, resolution, bit_depth = extract_image_info(file)
-        set_attributes(ctx, dimensions, resolution, bit_depth, {
+        set_attributes(ctx, file, dimensions, resolution, bit_depth, {
             "show_dimensions": show_dimensions,
             "show_resolution": show_resolution,
             "show_bit_depth": show_bit_depth
