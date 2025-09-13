@@ -11,19 +11,19 @@ action:
 
   #Optional Properties
   version: 1
-  id: "ap::utilities::copy_as_png"
+  id: "ap::utilities::save_as_png"
   category: "utility/code/examples/dialog"
   type: python
   enable: true
   author: "Anchorpoint Software GmbH"
-  description: "This command takes one or multiple images and copies the bitmap to the clipboard as a PNG file"
+  description: "This command takes one or multiple images and saves them in PNG format"
   icon:
     path: "icons/copyImage.svg"
     
-  script: "copy_as_png.py"
+  script: "save_as_png.py"
 
   #Where to register this action: on specific filetypes
   register:
     file: 
       enable: true 
-      filter: "*.psd;*.exr;*.tga;*.obj;*.fbx;*.glb;*.gltf;*.hdr;*.psb" 
+      filter: "*.jpg;*.psd;*.exr;*.tga;*.obj;*.fbx;*.glb;*.gltf;*.hdr;*.psb" 
