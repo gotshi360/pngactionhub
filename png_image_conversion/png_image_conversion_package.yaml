@@ -1,14 +1,18 @@
 version: "1.0"
 
 action:
-  name: "PNG Image Conversion"
+  name: "Image Conversion PNG"
+
+  version: 1
   id: "ap::package::image_conversion"
   category: "utilities/image"
   type: package
   enable: true
-  author: "Your Name"
-  description: "Convert selected images to PNG and either copy them to the clipboard or save them next to the original files."
+  description: "Convert or export images to PNG in different ways"
+
+  author: "Custom Anchorpoint Tools"
+  icon:
+    path: "icons/image_conversion.svg"
 
   actions:
-    - ap::image_conversion::copy_as_png
-    - ap::image_conversion::save_as_png
+    - ap::custom::copy_or_save_png

@@ -1,10 +1,10 @@
 version: "1.0"
 
-name: "Save as PNG"
-id: "ap::image_conversion::save_as_png"
+name: "Image / PNG Options"
+id: "ap::custom::copy_or_save_png"
 type: python
 enable: true
-script: "save_as_png.py"
+script: "copy_or_save_png.py"
 python_packages: []
 register:
   file:
