@@ -11,8 +11,8 @@ action:
 
   #Optional Properties
   version: 1
-  id: "ap::package::image_conversion"
-  category: "utilities/image"
+  id: "ap::package::image"
+  category: "image"
   type: package
   enable: true
   author: "Anchorpoint Software GmbH"
@@ -22,5 +22,4 @@ action:
     path: "icons/imageConversion.svg"
 
   actions:
-    - ap::utilities::copy_as_png
-    - ap::utilities::save_as_png
+    - ap::image::copy
