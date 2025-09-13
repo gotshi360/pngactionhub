@@ -8,4 +8,4 @@ script: "save_as_png.py"
 python_packages: []
 register:
   file:
-    filter: "*.jpg;*.jpeg;*.png;*.tif;*.tiff;*.bmp;*.gif;*.exr;*.psd"
+    filter: "*.psb;*.jpg;*.jpeg;*.png;*.tif;*.tiff;*.bmp;*.gif;*.exr;*.psd"
