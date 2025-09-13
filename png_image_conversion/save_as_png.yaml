@@ -1,0 +1,15 @@
+version: "1.0"
+
+name: "Save as PNG"
+id: "ap::image_conversion::save_as_png"
+type: python
+enable: true
+script: "save_as_png.py"
+python_packages: []
+
+icon:
+  path: "icons/copyImage.svg"
+
+register:
+  file:
+    filter: "*.jpg;*.jpeg;*.png;*.tif;*.tiff;*.bmp;*.gif;*.exr;*.psd"
