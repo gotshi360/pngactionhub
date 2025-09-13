@@ -2,9 +2,10 @@ import anchorpoint as ap
 import apsync as aps
 from PIL import Image
 from psd_tools import PSDImage
+from pymediainfo import MediaInfo
+import os
 
 def extract_image_info(file_path):
-    print(f"Extracting info from: {file_path}")
     suffix = file_path.lower().split('.')[-1]
 
     try:
@@ -22,48 +23,81 @@ def extract_image_info(file_path):
                     "CMYK": 32, "I": 32, "F": 32
                 }
                 bit_depth = mode_to_bits.get(img.mode, "Unknown")
-        return f"{width} x {height}", f"{int(resolution)} dpi", f"{bit_depth}-bit"
+        return {
+            "Dimensions": f"{width} x {height}",
+            "Resolution": f"{int(resolution)} dpi",
+            "Bit Depth": f"{bit_depth}-bit"
+        }
     except Exception as e:
-        print(f"Error reading {file_path}: {e}")
-        return None, None, None
+        print(f"Error reading image {file_path}: {e}")
+        return {}
 
-def set_attributes(ctx, file_path, dimensions, resolution, bit_depth, settings):
+def extract_video_info(file_path):
+    try:
+        media_info = MediaInfo.parse(file_path)
+        for track in media_info.tracks:
+            if track.track_type == "Video":
+                width = track.width or 0
+                height = track.height or 0
+                dimensions = f"{width} x {height}" if width and height else "Unknown"
+                frame_rate = f"{float(track.frame_rate):.2f} fps" if track.frame_rate else "Unknown"
+                bitrate = f"{int(track.bit_rate) // 1000} kbps" if track.bit_rate else "Unknown"
+                duration_sec = (track.duration or 0) / 1000
+                minutes = int(duration_sec // 60)
+                seconds = int(duration_sec % 60)
+                duration = f"{minutes:02}:{seconds:02}" if duration_sec else "Unknown"
+                return {
+                    "Dimensions": dimensions,
+                    "Frame Rate": frame_rate,
+                    "Bitrate": bitrate,
+                    "Duration": duration
+                }
+        return {}
+    except Exception as e:
+        print(f"Error reading video {file_path}: {e}")
+        return {}
+
+def set_attributes(file_path, attributes, ctx, settings):
     api = aps.get_api()
     api.set_workspace(ctx.workspace_id)
 
-    attributes_to_set = []
+    for name, value in attributes.items():
+        # Check if it's enabled in settings
+        key_map = {
+            "Dimensions": "show_video_dimensions" if file_path.lower().endswith(('.mp4', '.mov')) else "show_dimensions",
+            "Resolution": "show_resolution",
+            "Bit Depth": "show_bit_depth",
+            "Frame Rate": "show_frame_rate",
+            "Bitrate": "show_bitrate",
+            "Duration": "show_duration"
+        }
 
-    if settings.get("show_dimensions", True):
-        attributes_to_set.append(("Dimensions", dimensions))
-    if settings.get("show_resolution", True):
-        attributes_to_set.append(("Resolution", resolution))
-    if settings.get("show_bit_depth", True):
-        attributes_to_set.append(("Bit Depth", bit_depth))
-
-    for name, value in attributes_to_set:
-        print(f"Setting attribute {name}: {value}")
-        if value is None:
+        key = key_map.get(name)
+        if not key or not settings.get(key, True):
             continue
+
+        print(f"Setting {name} = {value}")
         api.attributes.set_attribute_value(file_path, name, value)
 
 def main():
     ctx = ap.get_context()
     ui = ap.UI()
+    settings = aps.Settings()
 
     print("Starting metadata extraction...")
 
-    settings = aps.Settings()
-    show_dimensions = settings.get("show_dimensions", True)
-    show_resolution = settings.get("show_resolution", True)
-    show_bit_depth = settings.get("show_bit_depth", True)
-
     for file in ctx.selected_files:
-        dimensions, resolution, bit_depth = extract_image_info(file)
-        set_attributes(ctx, file, dimensions, resolution, bit_depth, {
-            "show_dimensions": show_dimensions,
-            "show_resolution": show_resolution,
-            "show_bit_depth": show_bit_depth
-        })
+        suffix = os.path.splitext(file)[1].lower()
+
+        if suffix in [".png", ".jpg", ".jpeg", ".psd", ".psb"]:
+            attributes = extract_image_info(file)
+        elif suffix in [".mp4", ".mov"]:
+            attributes = extract_video_info(file)
+        else:
+            print(f"Unsupported file type: {suffix}")
+            continue
+
+        set_attributes(file, attributes, ctx, settings)
 
     ui.show_success("Metadata extraction completed.")
 

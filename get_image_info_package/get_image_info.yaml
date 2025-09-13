@@ -10,7 +10,8 @@ action:
   python_packages:
     - pillow
     - psd-tools
+    - pymediainfo
 
   register:
     file:
-      filter: "*.png;*.jpg;*.jpeg;*.psd;*.psb"
+      filter: "*.png;*.jpg;*.jpeg;*.psd;*.psb;*.mp4;*.mov"
