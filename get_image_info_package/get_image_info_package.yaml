@@ -10,3 +10,5 @@ action:
 
   actions:
     - ap::image::get_info
+
+  settings: get_image_info_settings.py
