@@ -8,7 +8,8 @@ action:
   enable: true
   author: "Playngo support"
   description: "Convert selected images to PNG and either copy them to the clipboard or save them next to the original files."
-
+  icon:
+    path: "icons/imageConversion.svg"
   actions:
     - ap::image_conversion::copy_as_png
     - ap::image_conversion::save_as_png
