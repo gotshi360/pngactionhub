@@ -1,4 +1,4 @@
-# CHAT GPT PROMPT:
+﻿# CHAT GPT PROMPT:
 # Export all attributes of selected files or folders into a CSV file.
 # Handle all types including single and multiple choice tags.
 

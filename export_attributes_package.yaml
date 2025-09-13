@@ -1,4 +1,4 @@
-# Anchorpoint Markup Language
+﻿# Anchorpoint Markup Language
 # Full documentation: https://docs.anchorpoint.app/docs/actions/create-actions
 
 version: "1.0"
@@ -19,7 +19,3 @@ action:
 
   actions:
     - ap::export::attributes_csv
-
-  dependencies:
-    - export_attributes_to_csv.py
-    - export_attributes_to_csv.yaml
