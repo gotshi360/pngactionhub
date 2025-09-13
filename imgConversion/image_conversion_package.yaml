@@ -1,26 +1,14 @@
-#Anchorpoint Markup Language
-#Predefined Variables: e.g. ${path}
-#Environment Variables: e.g. ${MY_VARIABLE}
-#Full documentation: https://docs.anchorpoint.app/docs/actions/create-actions
-
 version: "1.0"
 
 action:
-  #Must Have Properties
   name: "Image Conversion"
-
-  #Optional Properties
-  version: 1
   id: "ap::package::image_conversion"
   category: "utilities/image"
   type: package
   enable: true
-  author: "Anchorpoint"
+  author: "Your Name"
   description: "Tools to convert image formats"
 
-  icon:
-    path: "icons/imageConversion.svg"
-
   actions:
-    - ap::utilities::copy_as_png
-    - ap::utilities::save_as_png
+    - ap::image_conversion::copy_as_png
+    - ap::image_conversion::save_as_png
