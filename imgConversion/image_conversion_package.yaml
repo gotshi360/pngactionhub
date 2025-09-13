@@ -7,7 +7,7 @@ version: "1.0"
 
 action:
   #Must Have Properties
-  name: "Image Conversion"
+  name: "Image Conversion PNG"
 
   #Optional Properties
   version: 1
