@@ -1,3 +1,7 @@
+# CHAT GPT PROMPT:
+# This script converts selected image files to PNG format and saves them next to the original files.
+# It does NOT copy them to the clipboard.
+
 import anchorpoint as ap
 import apsync as aps
 import os
@@ -9,7 +13,8 @@ def create_temp_directory():
 
 def process_image_and_save(workspace_id, input_path, temp_dir):
     file_name = os.path.splitext(os.path.basename(input_path))[0]
-
+    
+    # Generate PNG thumbnail in the temp directory
     aps.generate_thumbnails(
         [input_path],
         temp_dir,
@@ -26,6 +31,7 @@ def process_image_and_save(workspace_id, input_path, temp_dir):
     renamed_file = os.path.join(temp_dir, file_name + ".png")
     os.rename(generated_file, renamed_file)
 
+    # Save next to original
     destination_path = os.path.join(os.path.dirname(input_path), os.path.basename(renamed_file))
     shutil.copyfile(renamed_file, destination_path)
     print(f"Saved PNG to: {destination_path}")

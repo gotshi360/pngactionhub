@@ -1,14 +1,26 @@
+#Anchorpoint Markup Language
+#Predefined Variables: e.g. ${path}
+#Environment Variables: e.g. ${MY_VARIABLE}
+#Full documentation: https://docs.anchorpoint.app/docs/actions/create-actions
+
 version: "1.0"
 
 action:
+  #Must Have Properties
   name: "Image Conversion"
-  id: "ap::package::image_conversion"
-  category: "utilities/image"
+
+  #Optional Properties
+  version: 1
+  id: "ap::package::image"
+  category: "image"
   type: package
   enable: true
-  author: "Your Name"
-  description: "Tools to convert image formats"
+  author: "Anchorpoint Software GmbH"
+  description: Converts any image to PNG and puts it on the clipboard
+
+  icon:
+    path: "icons/imageConversion.svg"
 
   actions:
-    - ap::image_conversion::copy_as_png
-    - ap::image_conversion::save_as_png
+    - ap::image::copy_as_png
+    - ap::image::save_as_png

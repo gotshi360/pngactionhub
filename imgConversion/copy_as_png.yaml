@@ -7,11 +7,11 @@ version: "1.0"
 
 action: 
   #Must Have Properties
-  name: "Copy to PNG"
+  name: "Copy as PNG"
 
   #Optional Properties
   version: 1
-  id: "ap::utilities::copy_as_png"
+  id: "ap::image::copy_as_png"
   category: "utility/code/examples/dialog"
   type: python
   enable: true
