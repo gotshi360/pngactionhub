@@ -1,0 +1,30 @@
+#Anchorpoint Markup Language
+#Predefined Variables: e.g. ${path}
+#Environment Variables: e.g. ${MY_VARIABLE}
+#Full documentation: https://docs.anchorpoint.app/docs/actions/create-actions
+
+version: "1.0"
+
+action:
+  #Must Have Properties
+  name: "MAINTENANCE"
+
+  #Optional Properties
+  version: 1
+  id: "ap::maintenance::sidebar"
+  category: "dcc/blender/thumbnail"
+  enable: false
+  type: python
+  author: "Anchorpoint Software GmbH"
+  icon:
+   path: :/icons/design-tools-photo-editing/flash.svg
+   color: "yellow"
+
+  script: "blender_thumbnail.py"
+
+  #Where to register this action
+  register:
+    sidebar:
+      enable: true
+    workspace_overview:
+      enable: true  
