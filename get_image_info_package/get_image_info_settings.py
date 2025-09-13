@@ -11,6 +11,7 @@ def store_settings(dialog: ap.Dialog):
     settings.set("show_frame_rate", dialog.get_value("show_frame_rate"))
     settings.set("show_bitrate", dialog.get_value("show_bitrate"))
     settings.set("show_duration", dialog.get_value("show_duration"))
+    settings.set("show_layer_count", dialog.get_value("show_layer_count"))
     settings.store()
     dialog.close()
     ui.show_success("Settings saved")
@@ -20,6 +21,7 @@ dialog.title = "Get Image Info Settings"
 
 dialog.add_info("🖼️ Image Attributes")
 dialog.add_text("Show Dimensions").add_checkbox(default=settings.get("show_dimensions", True), var="show_dimensions")
+dialog.add_text("Show Layer Count").add_checkbox(default=settings.get("show_layer_count", True), var="show_layer_count")
 
 dialog.add_info("🎬 Video Attributes")
 dialog.add_text("Show Dimensions").add_checkbox(default=settings.get("show_video_dimensions", True), var="show_video_dimensions")

@@ -8,12 +8,14 @@ def extract_image_info(file_path):
     suffix = file_path.lower().split('.')[-1]
 
     try:
-        if suffix == "psb":
+        if suffix == "psb" or suffix == "psd":
             from psd_tools import PSDImage
-            psb = PSDImage.open(file_path)
-            width, height = psb.size
+            psd = PSDImage.open(file_path)
+            width, height = psd.size
+            layer_count = len(list(psd.descendants()))
             return {
-                "Dimensions": f"{width} x {height}"
+                "Dimensions": f"{width} x {height}",
+                "Layer Count": str(layer_count)
             }
         else:
             with Image.open(file_path) as img:
@@ -59,7 +61,8 @@ def set_attributes(file_path, attributes, ctx, settings):
             "Dimensions": "show_video_dimensions" if file_path.lower().endswith(('.mp4', '.mov')) else "show_dimensions",
             "Frame Rate": "show_frame_rate",
             "Bitrate": "show_bitrate",
-            "Duration": "show_duration"
+            "Duration": "show_duration",
+            "Layer Count": "show_layer_count"
         }
 
         key = key_map.get(name)
