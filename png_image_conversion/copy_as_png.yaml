@@ -16,7 +16,7 @@ action:
   type: python
   enable: true
   author: "Anchorpoint Software GmbH"
-  description: "This command takes one or multiple images, converts it to png and copies the bitmap to the location of the source image"
+  description: "This command takes one or multiple images, converts it to PNG and copies the bitmap to Clipboard."
   icon:
     path: "icons/copyImage.svg"
     
