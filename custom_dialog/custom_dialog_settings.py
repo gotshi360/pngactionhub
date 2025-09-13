@@ -1,38 +1,42 @@
 import anchorpoint as ap
 import apsync as aps
 
-ui = ap.UI()
-settings = aps.Settings("custom_dialog")
+
+class CustomDialogSettings(ap.AnchorpointSettings):
+    def __init__(self):
+        super().__init__()
+        self.name = "Custom Dialog"
+        self.icon = "star"  # lehet "info", "check", "warning", "error", "star"
+        self.priority = 10  # minél nagyobb, annál feljebb lesz a Settings listában
+
+    def get_dialog(self) -> ap.Dialog:
+        settings = aps.Settings("custom_dialog")
+
+        title = settings.get("title", "Default Title")
+        message = settings.get("message", "Hello from Anchorpoint!")
+        auto_start = settings.get("auto_start", False)
+        icon = settings.get("icon", "info")
+
+        icon_options = ["info", "star", "check", "warning", "error"]
+
+        dialog = ap.Dialog()
+        dialog.title = "Custom Dialog Settings"
+        dialog.add_text("Dialog Title\t").add_input(title, var="title_var")
+        dialog.add_text("Dialog Message\t").add_input(message, var="msg_var")
+        dialog.add_checkbox("Show on Startup", var="auto_var", checked=auto_start)
+        dialog.add_text("Sidebar Icon\t").add_dropdown(icon, icon_options, var="icon_var")
+
+        def store_settings(d: ap.Dialog):
+            settings.set("title", d.get_value("title_var"))
+            settings.set("message", d.get_value("msg_var"))
+            settings.set("auto_start", d.get_value("auto_var"))
+            settings.set("icon", d.get_value("icon_var"))
+            settings.store()
+            ap.UI().show_success("Custom Dialog settings saved")
+            d.close()
+
+        dialog.add_button("Save", callback=store_settings)
+        return dialog
 
 
-def store_settings(dialog: ap.Dialog):
-    settings.set("title", dialog.get_value("title_var"))
-    settings.set("message", dialog.get_value("msg_var"))
-    settings.set("auto_start", dialog.get_value("auto_var"))
-    settings.set("icon", dialog.get_value("icon_var"))
-    settings.store()
-    ui.show_success("Custom Dialog settings saved")
-    dialog.close()
-
-
-def open_settings():
-    dialog = ap.Dialog()
-    dialog.title = "Custom Dialog Settings"
-
-    title = settings.get("title", "Default Title")
-    message = settings.get("message", "Hello from Anchorpoint!")
-    auto_start = settings.get("auto_start", False)
-    icon = settings.get("icon", "info")
-
-    icon_options = ["info", "star", "check", "warning", "error"]
-
-    dialog.add_text("Dialog Title	").add_input(title, var="title_var")
-    dialog.add_text("Dialog Message	").add_input(message, var="msg_var")
-    dialog.add_checkbox("Show on Startup", var="auto_var", checked=auto_start)
-    dialog.add_text("Sidebar Icon	").add_dropdown(icon, icon_options, var="icon_var")
-
-    dialog.add_button("Save", callback=store_settings)
-    dialog.show()
-
-
-open_settings()
+ap.create_action(CustomDialogSettings())
