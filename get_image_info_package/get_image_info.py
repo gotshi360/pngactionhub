@@ -11,9 +11,16 @@ def extract_image_info(file_path):
     try:
         if suffix in ["psd", "psb"]:
             psd = PSDImage.open(file_path)
-            width, height = psd.width, psd.height
+            width, height = psd.size
             resolution = 72  # Default fallback resolution
-            bit_depth = psd.header.depth
+
+            # Try new API for bit depth
+            try:
+                bit_depth = psd.image.bit_depth
+            except Exception as e:
+                print(f"Could not get bit depth from PSD: {e}")
+                bit_depth = 8  # fallback
+
         else:
             with Image.open(file_path) as img:
                 width, height = img.size
@@ -23,6 +30,7 @@ def extract_image_info(file_path):
                     "CMYK": 32, "I": 32, "F": 32
                 }
                 bit_depth = mode_to_bits.get(img.mode, "Unknown")
+
         return {
             "Dimensions": f"{width} x {height}",
             "Resolution": f"{int(resolution)} dpi",
