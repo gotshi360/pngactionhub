@@ -1,3 +1,8 @@
+#Anchorpoint Markup Language
+#Predefined Variables: e.g. ${path}
+#Environment Variables: e.g. ${MY_VARIABLE}
+#Full documentation: https://docs.anchorpoint.app/docs/actions/create-actions
+
 version: "1.0"
 
 action:
@@ -5,9 +10,10 @@ action:
   id: "ap::ui::custom_dialog"
   type: python
   enable: true
+  author: "Your Name"
+
   script: "custom_dialog.py"
   settings: "custom_dialog_settings.py"
-  author: "Your Name"
 
   register:
     sidebar: true
