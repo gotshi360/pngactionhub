@@ -7,8 +7,6 @@ settings = aps.Settings()
 
 def store_settings(dialog: ap.Dialog):
     settings.set("show_dimensions", dialog.get_value("show_dimensions"))
-    settings.set("show_resolution", dialog.get_value("show_resolution"))
-    settings.set("show_bit_depth", dialog.get_value("show_bit_depth"))
     settings.set("show_video_dimensions", dialog.get_value("show_video_dimensions"))
     settings.set("show_frame_rate", dialog.get_value("show_frame_rate"))
     settings.set("show_bitrate", dialog.get_value("show_bitrate"))
@@ -22,8 +20,6 @@ dialog.title = "Get Image Info Settings"
 
 dialog.add_info("🖼️ Image Attributes")
 dialog.add_text("Show Dimensions").add_checkbox(default=settings.get("show_dimensions", True), var="show_dimensions")
-dialog.add_text("Show Resolution").add_checkbox(default=settings.get("show_resolution", True), var="show_resolution")
-dialog.add_text("Show Bit Depth").add_checkbox(default=settings.get("show_bit_depth", True), var="show_bit_depth")
 
 dialog.add_info("🎬 Video Attributes")
 dialog.add_text("Show Dimensions").add_checkbox(default=settings.get("show_video_dimensions", True), var="show_video_dimensions")

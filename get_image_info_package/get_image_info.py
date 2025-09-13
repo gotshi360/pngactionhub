@@ -1,7 +1,6 @@
 import anchorpoint as ap
 import apsync as aps
 from PIL import Image
-from psd_tools import PSDImage
 from pymediainfo import MediaInfo
 import os
 
@@ -9,32 +8,10 @@ def extract_image_info(file_path):
     suffix = file_path.lower().split('.')[-1]
 
     try:
-        if suffix in ["psd", "psb"]:
-            psd = PSDImage.open(file_path)
-            width, height = psd.size
-            resolution = 72  # Default fallback resolution
-
-            # Try new API for bit depth
-            try:
-                bit_depth = psd.image.bit_depth
-            except Exception as e:
-                print(f"Could not get bit depth from PSD: {e}")
-                bit_depth = 8  # fallback
-
-        else:
-            with Image.open(file_path) as img:
-                width, height = img.size
-                resolution = img.info.get("dpi", (72, 72))[0]
-                mode_to_bits = {
-                    "1": 1, "L": 8, "P": 8, "RGB": 24, "RGBA": 32,
-                    "CMYK": 32, "I": 32, "F": 32
-                }
-                bit_depth = mode_to_bits.get(img.mode, "Unknown")
-
+        with Image.open(file_path) as img:
+            width, height = img.size
         return {
-            "Dimensions": f"{width} x {height}",
-            "Resolution": f"{int(resolution)} dpi",
-            "Bit Depth": f"{bit_depth}-bit"
+            "Dimensions": f"{width} x {height}"
         }
     except Exception as e:
         print(f"Error reading image {file_path}: {e}")
@@ -72,8 +49,6 @@ def set_attributes(file_path, attributes, ctx, settings):
     for name, value in attributes.items():
         key_map = {
             "Dimensions": "show_video_dimensions" if file_path.lower().endswith(('.mp4', '.mov')) else "show_dimensions",
-            "Resolution": "show_resolution",
-            "Bit Depth": "show_bit_depth",
             "Frame Rate": "show_frame_rate",
             "Bitrate": "show_bitrate",
             "Duration": "show_duration"
