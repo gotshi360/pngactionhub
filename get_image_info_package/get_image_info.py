@@ -12,7 +12,7 @@ def extract_image_info(file_path):
         if suffix in ["psd", "psb"]:
             psd = PSDImage.open(file_path)
             width, height = psd.width, psd.height
-            resolution = int(psd.image_resources.get_data("resolution_info").dpi) if psd.image_resources.has("resolution_info") else 72
+            resolution = 72  # Default fallback resolution
             bit_depth = psd.header.depth
         else:
             with Image.open(file_path) as img:
@@ -62,7 +62,6 @@ def set_attributes(file_path, attributes, ctx, settings):
     api.set_workspace(ctx.workspace_id)
 
     for name, value in attributes.items():
-        # Check if it's enabled in settings
         key_map = {
             "Dimensions": "show_video_dimensions" if file_path.lower().endswith(('.mp4', '.mov')) else "show_dimensions",
             "Resolution": "show_resolution",
