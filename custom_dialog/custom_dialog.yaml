@@ -1,0 +1,13 @@
+version: "1.0"
+
+action:
+  name: "UI / Custom Dialog"
+  id: "ap::ui::custom_dialog"
+  type: python
+  enable: true
+  script: "custom_dialog.py"
+  settings: "custom_dialog_settings.py"
+  author: "Your Name"
+
+  register:
+    sidebar: true
