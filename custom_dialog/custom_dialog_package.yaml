@@ -1,0 +1,19 @@
+#Anchorpoint Markup Language
+#Predefined Variables: e.g. ${path}
+#Environment Variables: e.g. ${MY_VARIABLE}
+#Full documentation: https://docs.anchorpoint.app/docs/actions/create-actions
+
+version: "1.0"
+
+action:
+  name: "Custom Dialog Package"
+  id: "ap::package::custom_dialog"
+  category: "ui/dialog"
+  type: package
+  enable: true
+  version: 1
+  author: "Your Name"
+  description: "A customizable dialog that can show up at startup or from the sidebar."
+
+  actions:
+    - ap::ui::custom_dialog
