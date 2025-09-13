@@ -22,5 +22,5 @@ action:
     path: "icons/imageConversion.svg"
 
   actions:
-    - ap::image::copy_as_png
-    - ap::image::save_as_png
+    - ap::utilities::copy_as_png
+    - ap::utilities::save_as_png
