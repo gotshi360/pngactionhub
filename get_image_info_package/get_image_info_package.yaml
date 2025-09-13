@@ -1,0 +1,12 @@
+version: "1.0"
+
+action:
+  name: "Get Image Info Package"
+  id: "ap::package::get_image_info"
+  type: package
+  enable: true
+  author: "Anchorpoint Custom"
+  description: Extract image metadata (dimensions, resolution, bit depth) from PNG, JPG, PSD, PSB files and set them as attributes.
+
+  actions:
+    - ap::image::get_info

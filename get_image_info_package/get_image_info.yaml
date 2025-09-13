@@ -1,0 +1,16 @@
+version: "1.0"
+
+action:
+  name: "Get Image Info"
+  id: "ap::image::get_info"
+  type: python
+  enable: true
+  script: "get_image_info.py"
+  settings: "get_image_info_settings.py"
+  python_packages:
+    - pillow
+    - psd-tools
+
+  register:
+    file:
+      filter: "*.png;*.jpg;*.jpeg;*.psd;*.psb"
