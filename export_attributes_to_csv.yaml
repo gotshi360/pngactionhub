@@ -1,0 +1,14 @@
+version: "1.0"
+
+name: "Export Attributes to CSV"
+id: "ap::export::attributes_csv"
+type: python
+enable: true
+script: "export_attributes_to_csv.py"
+python_packages:
+  - ""
+register:
+  file:
+    filter: "*.*"
+  folder:
+    filter: "*"
