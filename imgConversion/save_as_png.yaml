@@ -7,7 +7,7 @@ version: "1.0"
 
 action: 
   #Must Have Properties
-  name: "Copy to PNG"
+  name: "Save as PNG"
 
   #Optional Properties
   version: 1
