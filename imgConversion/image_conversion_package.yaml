@@ -11,8 +11,8 @@ action:
 
   #Optional Properties
   version: 1
-  id: "ap::package::image_conversion"
-  category: "utilities/image"
+  id: "ap::package::image"
+  category: "image"
   type: package
   enable: true
   author: "Anchorpoint"
