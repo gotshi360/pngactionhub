@@ -19,7 +19,7 @@ action:
   description: "Tools to convert image formats"
 
   icon:
-    path: "icons/imageConversion.svg"
+    path: "icons/pngLogo.svg"
 
   actions:
     - ap::utilities::copy_as_png
