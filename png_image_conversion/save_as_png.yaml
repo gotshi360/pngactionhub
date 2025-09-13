@@ -12,4 +12,4 @@ icon:
 
 register:
   file:
-    filter: "*.jpg;*.jpeg;*.png;*.tif;*.tiff;*.bmp;*.gif;*.exr;*.psd"
+    filter: "*.jpg;*.jpeg;*.png;*.tif;*.tiff;*.bmp;*.gif;*.exr;*.psd;.psb"
