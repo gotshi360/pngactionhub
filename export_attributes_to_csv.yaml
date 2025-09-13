@@ -6,9 +6,6 @@ type: python
 enable: true
 script: "export_attributes_to_csv.py"
 
-python_packages:
-  - ""
-
 register:
   file:
     filter: "*.*"
