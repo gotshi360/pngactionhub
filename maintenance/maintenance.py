@@ -2,7 +2,7 @@ import anchorpoint as ap
 
 ctx = ap.get_context()
 ui = ap.UI()
-
+path = ctx.path
 
 def show_dialog():
     dialog = ap.Dialog()
@@ -15,13 +15,4 @@ def show_dialog():
     dialog.add_text("Thank you for your patience.")
     dialog.add_info("Play'n GO Anchorpoint Support")
     dialog.show()
-
-
-# App indulásakor is mutassa a dialogot
-def on_application_started(ctx: ap.Context):
-    show_dialog()
-
-
-# Projekt megnyitásakor is mutassa a dialogot
-def on_project_opened(ctx: ap.Context):
-    show_dialog()
+show_dialog()
