@@ -1,8 +1,4 @@
 #Anchorpoint Markup Language
-#Predefined Variables: e.g. ${path}
-#Environment Variables: e.g. ${MY_VARIABLE}
-#Full documentation: https://docs.anchorpoint.app/docs/actions/create-actions
-
 version: "1.0"
 
 action:
@@ -12,8 +8,7 @@ action:
   enable: true
   author: "Your Name"
 
-  script: custom_dialog.py
-  settings: custom_dialog_settings.py
+  script: maintenance.py
 
   icon:
     path: :/icons/design-tools-photo-editing/flash.svg

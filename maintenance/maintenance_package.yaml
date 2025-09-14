@@ -1,0 +1,15 @@
+#Anchorpoint Markup Language
+version: "1.0"
+
+action:
+  name: "Maintenance Package"
+  id: ap::package::maintenance_notice
+  category: "ui/dialog"
+  type: package
+  enable: true
+  version: 1
+  author: "Your Name"
+  description: "Shows a Maintenance Notice dialog on startup, project open, or manually from the sidebar."
+
+  actions:
+    - ap::ui::maintenance_notice
