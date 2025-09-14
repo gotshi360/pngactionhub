@@ -2,14 +2,14 @@ import anchorpoint as ap
 import apsync as aps
 from PIL import Image
 from pymediainfo import MediaInfo
+from psd_tools import PSDImage
 import os
 
 def extract_image_info(file_path):
     suffix = file_path.lower().split('.')[-1]
 
     try:
-        if suffix == "psb" or suffix == "psd":
-            from psd_tools import PSDImage
+        if suffix in ["psb", "psd"]:
             psd = PSDImage.open(file_path)
             width, height = psd.size
             layer_count = len(list(psd.descendants()))
@@ -72,15 +72,24 @@ def set_attributes(file_path, attributes, ctx, settings):
         print(f"Setting {name} = {value}")
         api.attributes.set_attribute_value(file_path, name, value)
 
-def main():
+def run_with_progress():
     ctx = ap.get_context()
     ui = ap.UI()
     settings = aps.Settings()
+    selected_files = ctx.selected_files
+    total = len(selected_files)
 
-    print("Starting metadata extraction...")
+    progress = ap.Progress("Extracting Metadata", infinite=False)
+    progress.set_cancelable(True)
 
-    for file in ctx.selected_files:
+    for idx, file in enumerate(selected_files):
+        if progress.canceled:
+            print("Operation canceled by user.")
+            break
+
         suffix = os.path.splitext(file)[1].lower()
+        progress.set_text(f"Processing: {os.path.basename(file)}")
+        print(f"Processing {file}")
 
         if suffix in [".png", ".jpg", ".jpeg", ".psd", ".psb"]:
             attributes = extract_image_info(file)
@@ -88,10 +97,17 @@ def main():
             attributes = extract_video_info(file)
         else:
             print(f"Unsupported file type: {suffix}")
+            progress.report_progress((idx + 1) / total)
             continue
 
         set_attributes(file, attributes, ctx, settings)
+        progress.report_progress((idx + 1) / total)
 
+    progress.finish()
     ui.show_success("Metadata extraction completed.")
+
+def main():
+    ctx = ap.get_context()
+    ctx.run_async(run_with_progress)
 
 main()
