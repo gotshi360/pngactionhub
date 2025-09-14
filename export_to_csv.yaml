@@ -1,0 +1,15 @@
+version: "1.0"
+
+name: "Export to CSV"
+id: "ap::export::to_csv"
+type: python
+enable: true
+script: "export_to_csv.py"
+settings: ""
+python_packages: []
+
+register:
+  file:
+    enable: true
+  folder:
+    enable: true
