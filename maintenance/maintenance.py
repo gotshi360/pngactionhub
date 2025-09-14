@@ -17,10 +17,6 @@ def show_dialog():
     dialog.show()
 
 
-# Sidebar kattintáskor is mindig fusson
-show_dialog()
-
-
 # App indulásakor is mutassa a dialogot
 def on_application_started(ctx: ap.Context):
     show_dialog()
