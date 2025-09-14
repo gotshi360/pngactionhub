@@ -6,6 +6,10 @@ ui = ap.UI()
 
 
 def show_dialog():
+    settings = aps.Settings("maintenance_notice")
+    if not settings.get("enabled", True):
+        return  # ha nincs engedélyezve, semmit se csináljon
+
     dialog = ap.Dialog()
     dialog.title = "Maintenance Notice"
     if ctx.icon:
@@ -20,18 +24,16 @@ def show_dialog():
 
 
 def on_application_started(ctx: ap.Context):
-    """Automatically show dialog if auto_start is enabled in settings"""
     settings = aps.Settings("maintenance_notice")
-    if settings.get("auto_start", False):
+    if settings.get("enabled", True) and settings.get("auto_start", False):
         show_dialog()
 
 
 def on_project_opened(ctx: ap.Context):
-    """Also show dialog when a project is opened, if auto_start is enabled"""
     settings = aps.Settings("maintenance_notice")
-    if settings.get("auto_start", False):
+    if settings.get("enabled", True) and settings.get("auto_start", False):
         show_dialog()
 
 
-# Always show when triggered manually
+# Always show when triggered manually (but only if enabled)
 show_dialog()
