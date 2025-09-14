@@ -7,7 +7,7 @@ version: "1.0"
 
 action:
   name: "Custom Dialog Package"
-  id: "ap::package::custom_dialog"
+  id: ap::package::custom_dialog
   category: "ui/dialog"
   type: package
   enable: true
@@ -17,3 +17,5 @@ action:
 
   actions:
     - ap::ui::custom_dialog
+
+  settings: custom_dialog_settings.py

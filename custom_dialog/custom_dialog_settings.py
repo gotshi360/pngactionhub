@@ -6,8 +6,8 @@ class CustomDialogSettings(ap.AnchorpointSettings):
     def __init__(self):
         super().__init__()
         self.name = "Custom Dialog"
-        self.icon = "star"  # lehet "info", "check", "warning", "error", "star"
-        self.priority = 10  # minél nagyobb, annál feljebb lesz a Settings listában
+        self.icon = "star"
+        self.priority = 10
 
     def get_dialog(self) -> ap.Dialog:
         settings = aps.Settings("custom_dialog")
@@ -37,6 +37,3 @@ class CustomDialogSettings(ap.AnchorpointSettings):
 
         dialog.add_button("Save", callback=store_settings)
         return dialog
-
-
-ap.create_action(CustomDialogSettings())
