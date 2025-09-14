@@ -6,14 +6,17 @@
 version: "1.0"
 
 action:
-  name: "UI / Custom Dialog"
-  id: ap::ui::custom_dialog
+  name: "MAINTENANCE"
+  id: ap::ui::maintenance_notice
   type: python
   enable: true
   author: "Your Name"
 
   script: custom_dialog.py
   settings: custom_dialog_settings.py
+
+  icon:
+    path: :/icons/design-tools-photo-editing/flash.svg
 
   register:
     sidebar: {}
