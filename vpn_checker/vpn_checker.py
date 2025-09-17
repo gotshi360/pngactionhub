@@ -30,7 +30,7 @@ def run_vpn_checker(interval, test_url):
 
         elif not connected:
             msg = "VPN is DISCONNECTED ❌"
-            ui.show_info(msg, description = "Learn how to <a href='https://playngo.sharepoint.com/:b:/s/OnePlaynGO/EWoYO4KXq3dCjgAVR3wqu7MBXBiQK_vN6bR6T5c7B-CPCg?e=ESxako'>fix this</a>.", duration=20000)
+            ui.show_info(msg, description = "Please reconnect or <a href='https://playngo.sharepoint.com/:b:/s/OnePlaynGO/EWoYO4KXq3dCjgAVR3wqu7MBXBiQK_vN6bR6T5c7B-CPCg?e=ESxako'>setup VPN</a>.", duration=20000)
 
             if not printed_disconnected:
                 print(f"[VPN Checker] Status changed: {msg}")
