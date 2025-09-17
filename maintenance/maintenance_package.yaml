@@ -10,6 +10,9 @@ action:
   version: 1
   author: "Your Name"
   description: "Shows a Maintenance Notice dialog on startup, project open, or manually from the sidebar."
-
+ 
+  icon:
+    path: "icons/pngLogo.svg"
+    
   actions:
     - ap::ui::maintenance_notice

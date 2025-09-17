@@ -1,0 +1,15 @@
+version: "1.0"
+
+action:
+  name: "VPN Checker"
+  id: "ap::utilities::vpnchecker"
+  type: python
+  enable: true
+  script: "vpn_checker.py"
+  settings: "vpn_checker_settings.py"
+  python_packages:
+    - requests
+
+  register:
+    sidebar:
+      enable: false

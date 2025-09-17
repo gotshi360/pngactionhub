@@ -1,0 +1,17 @@
+version: "1.0"
+
+action:
+  name: "VPN Checker Package"
+  id: "ap::package::vpn_checker"
+  type: package
+  enable: true
+  version: 1
+  author: "Anchorpoint Actions Assistant"
+  description: "VPN status monitoring via URL reachability"
+  icon:
+    path: icons/vpn.svg
+
+  actions:
+    - ap::utilities::vpnchecker
+
+  settings: vpn_checker_settings.py
