@@ -42,7 +42,7 @@ def run_vpn_checker(interval, test_url):
 
 def start_checker():
     settings = apsync.Settings("vpn_checker")
-    interval = int(settings.get("interval", 5))
+    interval = int(settings.get("interval", 15))
     test_url = settings.get("vpn_url", "https://gitea.playngo.com").strip()
 
     print(f"[VPN Checker] Using interval: {interval} seconds")
