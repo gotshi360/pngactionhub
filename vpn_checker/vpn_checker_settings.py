@@ -21,7 +21,7 @@ def store(dialog):
         ui.show_error("Interval must be an integer")
 
 def show_settings():
-    interval = str(settings.get("interval", 1))
+    interval = str(settings.get("interval", 15))
     vpn_url = settings.get("vpn_url", "https://gitea.playngo.com")
 
     dialog = ap.Dialog()

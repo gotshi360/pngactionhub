@@ -23,14 +23,14 @@ def run_vpn_checker(interval, test_url):
 
         if connected and not was_connected_once:
             msg = "VPN is CONNECTED ✅"
-            ui.show_info(msg)
+            ui.show_info(msg, duration=10000)
             print(f"[VPN Checker] Status changed: {msg}")
             was_connected_once = True
             printed_disconnected = False
 
         elif not connected:
             msg = "VPN is DISCONNECTED ❌"
-            ui.show_info(msg)
+            ui.show_info(msg, description = "Learn how to <a href='https://playngo.sharepoint.com/:b:/s/OnePlaynGO/EWoYO4KXq3dCjgAVR3wqu7MBXBiQK_vN6bR6T5c7B-CPCg?e=ESxako'>fix this</a>.", duration=20000)
 
             if not printed_disconnected:
                 print(f"[VPN Checker] Status changed: {msg}")
@@ -42,7 +42,7 @@ def run_vpn_checker(interval, test_url):
 
 def start_checker():
     settings = apsync.Settings("vpn_checker")
-    interval = int(settings.get("interval", 1))
+    interval = int(settings.get("interval", 5))
     test_url = settings.get("vpn_url", "https://gitea.playngo.com").strip()
 
     print(f"[VPN Checker] Using interval: {interval} seconds")
