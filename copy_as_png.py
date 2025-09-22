@@ -1,42 +1,41 @@
-# CHAT GPT PROMPT:
-# This script converts selected image files to PNG format and copies them to the clipboard.
-# It now includes a cancelable progress bar and shows the current file being processed.
-
 import anchorpoint as ap
 import apsync as aps
 import os
 import tempfile
 
-def create_temp_directory():
-    return tempfile.mkdtemp()
+import subprocess, sys
 
-def process_image(workspace_id, input_path, temp_dir):
-    file_name = os.path.splitext(os.path.basename(input_path))[0]
+def run_hidden(cmd):
+    startupinfo = None
+    if sys.platform.startswith("win"):
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    return subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo)
 
-    # Generate PNG thumbnail in the temp directory
-    aps.generate_thumbnails(
-        [input_path],
-        temp_dir,
-        with_detail=True,
-        with_preview=False,
-        workspace_id=workspace_id,
-    )
 
-    generated_file = os.path.join(temp_dir, file_name + "_dt.png")
-    if not os.path.exists(generated_file):
-        print(f"ERROR: Generated PNG not found: {generated_file}")
+def convert_with_imagemagick(input_path, temp_dir):
+    action_root = os.path.dirname(__file__)
+    magick_path = os.path.join(action_root, "tools", "imagemagick", "magick.exe")
+
+    if not os.path.exists(magick_path):
+        print(f"ERROR: magick.exe not found at {magick_path}")
         return None
 
-    renamed_file = os.path.join(temp_dir, file_name + ".png")
-    os.rename(generated_file, renamed_file)
-    return renamed_file
+    output_path = os.path.join(temp_dir, os.path.splitext(os.path.basename(input_path))[0] + ".png")
+
+    result = run_hidden([magick_path, f"{input_path}[0]", output_path])
+    if result.returncode != 0:
+        print("ImageMagick error:", result.stderr)
+        return None
+
+    return output_path
 
 def copy_images_to_clipboard(workspace_id, file_paths):
     progress = ap.Progress("Generating PNGs", infinite=False)
     progress.set_cancelable(True)
 
     ui = ap.UI()
-    temp_dir = create_temp_directory()
+    temp_dir = tempfile.mkdtemp()
     png_paths = []
 
     total = len(file_paths)
@@ -50,7 +49,7 @@ def copy_images_to_clipboard(workspace_id, file_paths):
         progress.set_text(f"Processing {filename}")
         print(f"Processing: {input_path}")
 
-        png_path = process_image(workspace_id, input_path, temp_dir)
+        png_path = convert_with_imagemagick(input_path, temp_dir)
         if png_path:
             png_paths.append(png_path)
 

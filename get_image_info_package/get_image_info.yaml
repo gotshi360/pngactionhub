@@ -7,6 +7,9 @@ action:
   enable: true
   script: "get_image_info.py"
   settings: "get_image_info_settings.py"
+  icon:
+    path: "icons/getinfo.svg"
+
   python_packages:
     - pillow
     - pymediainfo
@@ -15,3 +18,5 @@ action:
   register:
     file:
       filter: "*.png;*.jpg;*.jpeg;*.psd;*.psb;*.mp4;*.mov"
+    folder:
+      enable: true

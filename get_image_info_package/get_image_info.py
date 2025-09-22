@@ -4,8 +4,50 @@ from PIL import Image
 from pymediainfo import MediaInfo
 from psd_tools import PSDImage
 import os
+import tempfile
+import shutil
+import subprocess
+import sys
 
-def extract_image_info(file_path):
+def run_hidden(cmd):
+    startupinfo = None
+    if sys.platform.startswith("win"):
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    return subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo)
+
+def extract_resolution_via_temp_png(file_path):
+    try:
+        temp_dir = tempfile.mkdtemp()
+        temp_png = os.path.join(temp_dir, "temp_resolution.png")
+
+        action_root = os.path.dirname(__file__)
+        magick_path = os.path.join(action_root, "tools", "imagemagick", "magick.exe")
+
+        if not os.path.exists(magick_path):
+            print(f"magick.exe not found at: {magick_path}")
+            return "Unknown"
+
+        result = run_hidden([magick_path, f"{file_path}[0]", temp_png])
+        if result.returncode != 0 or not os.path.exists(temp_png):
+            print("ImageMagick conversion failed:", result.stderr)
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return "Unknown"
+
+        with Image.open(temp_png) as img:
+            dpi = img.info.get("dpi")
+            dpi_val = round(dpi[0]) if dpi else 72
+
+        os.remove(temp_png)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+        return f"{dpi_val} DPI"
+
+    except Exception as e:
+        print(f"Error extracting resolution via temp PNG: {e}")
+        return "Unknown"
+
+def extract_image_info(file_path, workspace_id, settings):
     suffix = file_path.lower().split('.')[-1]
 
     try:
@@ -13,16 +55,30 @@ def extract_image_info(file_path):
             psd = PSDImage.open(file_path)
             width, height = psd.size
             layer_count = len(list(psd.descendants()))
-            return {
+
+            result = {
                 "Dimensions": f"{width} x {height}",
-                "Layer Count": str(layer_count)
+                "Layer Count": str(layer_count),
             }
+
+            if settings.get("show_resolution", True):
+                result["Resolution"] = extract_resolution_via_temp_png(file_path)
+
+            return result
+
         else:
             with Image.open(file_path) as img:
                 width, height = img.size
-            return {
-                "Dimensions": f"{width} x {height}"
-            }
+                result = {"Dimensions": f"{width} x {height}"}
+
+                if settings.get("show_resolution", True):
+                    dpi = img.info.get("dpi")
+                    if dpi:
+                        dpi_val = round(dpi[0])
+                        result["Resolution"] = f"{dpi_val} DPI"
+
+            return result
+
     except Exception as e:
         print(f"Error reading image {file_path}: {e}")
         return {}
@@ -59,6 +115,7 @@ def set_attributes(file_path, attributes, ctx, settings):
     for name, value in attributes.items():
         key_map = {
             "Dimensions": "show_video_dimensions" if file_path.lower().endswith(('.mp4', '.mov')) else "show_dimensions",
+            "Resolution": "show_resolution",
             "Frame Rate": "show_frame_rate",
             "Bitrate": "show_bitrate",
             "Duration": "show_duration",
@@ -76,9 +133,25 @@ def run_with_progress():
     ctx = ap.get_context()
     ui = ap.UI()
     settings = aps.Settings()
-    selected_files = ctx.selected_files
-    total = len(selected_files)
 
+    supported_suffixes = [".png", ".jpg", ".jpeg", ".psd", ".psb", ".mp4", ".mov"]
+    selected_files = list(ctx.selected_files)
+
+    recursive = settings.get("recursive", False)
+    for folder in ctx.selected_folders:
+        if recursive:
+            for root, dirs, files in os.walk(folder):
+                for entry in files:
+                    path = os.path.join(root, entry)
+                    if os.path.splitext(path)[1].lower() in supported_suffixes:
+                        selected_files.append(path)
+        else:
+            for entry in os.listdir(folder):
+                path = os.path.join(folder, entry)
+                if os.path.isfile(path) and os.path.splitext(path)[1].lower() in supported_suffixes:
+                    selected_files.append(path)
+
+    total = len(selected_files)
     progress = ap.Progress("Extracting Metadata", infinite=False)
     progress.set_cancelable(True)
 
@@ -92,7 +165,7 @@ def run_with_progress():
         print(f"Processing {file}")
 
         if suffix in [".png", ".jpg", ".jpeg", ".psd", ".psb"]:
-            attributes = extract_image_info(file)
+            attributes = extract_image_info(file, ctx.workspace_id, settings)
         elif suffix in [".mp4", ".mov"]:
             attributes = extract_video_info(file)
         else:
