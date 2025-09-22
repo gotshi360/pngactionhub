@@ -9,7 +9,7 @@ action:
   description: Extract image and video metadata (dimensions, resolution, bit depth, frame rate, duration, bitrate) from supported files and set them as attributes.
 
   icon:
-    path: "icons/pngLogo.svg"
+    path: "icons/getinfo.svg"
 
   actions:
     - ap::image::get_info
