@@ -1,5 +1,9 @@
 import anchorpoint as ap
 import apsync as aps
+from PIL import PngImagePlugin
+LARGE_ENOUGH_NUMBER = 100
+PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
+
 from PIL import Image
 from pymediainfo import MediaInfo
 from psd_tools import PSDImage
