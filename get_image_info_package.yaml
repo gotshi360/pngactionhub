@@ -1,7 +1,7 @@
 version: "1.0"
 
 action:
-  name: "Get Image Info Package"
+  name: "Get Image Info Package v1.1"
   id: "ap::package::get_image_info"
   type: package
   enable: true
