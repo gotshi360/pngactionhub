@@ -1,0 +1,18 @@
+version: "1.0"
+
+action:
+  name: "Spine Video Exporter"
+  id: "ap::spine::export"
+  type: python
+  enable: true
+  script: "spine_export.py"
+  settings: "spine_export_settings.py"
+  python_packages: []
+  
+  icon:
+    path: "icons/spine.svg"
+
+  register:
+    file:
+      enable: true
+      filter: "*.spine"

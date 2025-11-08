@@ -1,0 +1,16 @@
+# Anchorpoint Markup Language
+version: "1.0"
+
+action:
+  name: "Spine Video Exporter"
+  id: "ap::spine::videoexport"
+  category: "dcc/spine"
+  type: package
+  enable: true
+  author: "Anchorpoint Custom"
+  description: "Export all animations to video from a Spine project file"
+  settings: spine_export_settings.py
+  icon:
+    path: "icons/spine.svg"
+  actions:
+    - ap::spine::export
