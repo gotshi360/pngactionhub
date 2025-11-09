@@ -8,6 +8,9 @@ action:
   author: "Anchorpoint Custom"
   description: Extract image and video metadata (dimensions, resolution, bit depth, frame rate, duration, bitrate) from supported files and set them as attributes.
 
+  platforms:
+    - win
+
   icon:
     path: "icons/getinfo.svg"
 
