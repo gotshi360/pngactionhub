@@ -8,7 +8,7 @@ action:
   script: "spine_export.py"
   settings: "spine_export_settings.py"
   python_packages: []
-  
+
   icon:
     path: "icons/spine.svg"
 
@@ -16,3 +16,5 @@ action:
     file:
       enable: true
       filter: "*.spine"
+    folder:
+      enable: true
