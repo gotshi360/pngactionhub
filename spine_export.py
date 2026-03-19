@@ -932,48 +932,56 @@ def main():
         ctx.run_async(lambda: probe_skeletons_async(project_file, after_probe))
 
     elif folders:
-        # Folder flow: scan per-folder so we can tag empty ones as "No Anim"
-        folders_with_files: Dict[str, List[str]] = {}
-        empty_folders: List[str] = []
-        for folder in folders:
-            files = find_spine_files_in_folders([folder])
-            if files:
-                folders_with_files[folder] = files
-            else:
-                empty_folders.append(folder)
+        def scan_folders():
+            progress = ap.Progress('Scanning folders...', infinite=True)
+            progress.set_cancelable(False)
 
-        all_spine_files = [f for files in folders_with_files.values() for f in files]
+            folders_with_files: Dict[str, List[str]] = {}
+            empty_folders: List[str] = []
+            for folder in folders:
+                progress.set_text(f'Scanning: {os.path.basename(folder)}')
+                files = find_spine_files_in_folders([folder])
+                if files:
+                    folders_with_files[folder] = files
+                else:
+                    empty_folders.append(folder)
 
-        def tag_no_anim(targets: List[str]):
-            if not targets:
+            progress.finish()
+
+            all_spine_files = [f for files in folders_with_files.values() for f in files]
+
+            def tag_no_anim(targets: List[str]):
+                if not targets:
+                    return
+                try:
+                    _api = ap.get_api()
+                    ensure_preview_status_attribute(_api)
+                    for folder in targets:
+                        set_folder_preview_status(_api, folder, 'No Anim')
+                except Exception as e:
+                    dprint(f'Failed to set No Anim attributes: {e}')
+
+            if not all_spine_files:
+                ui.show_info('No Spine projects found', description='No .spine files were found in the selected folders.')
+                tag_no_anim(empty_folders)
                 return
-            try:
-                _api = ap.get_api()
-                ensure_preview_status_attribute(_api)
-                for folder in targets:
-                    set_folder_preview_status(_api, folder, 'No Anim')
-            except Exception as e:
-                dprint(f'Failed to set No Anim attributes: {e}')
 
-        if not all_spine_files:
-            ui.show_info('No Spine projects found', description='No .spine files were found in the selected folders.')
-            ctx.run_async(lambda: tag_no_anim(empty_folders))
-            return
+            def do_batch(export_local: bool):
+                tag_no_anim(empty_folders)
+                d = BATCH_DEFAULTS
+                export_worker(
+                    all_spine_files,
+                    d['width'], d['height'], d['fps'], d['bg'],
+                    d['single_file'], d['video_format'], d['user_output_override'],
+                    d['use_fixed_viewport'], d['center_viewport'],
+                    d['viewport_x'], d['viewport_y'],
+                    d['chosen_skeletons'],
+                    export_local=export_local,
+                )
 
-        def do_batch(export_local: bool):
-            tag_no_anim(empty_folders)
-            d = BATCH_DEFAULTS
-            export_worker(
-                all_spine_files,
-                d['width'], d['height'], d['fps'], d['bg'],
-                d['single_file'], d['video_format'], d['user_output_override'],
-                d['use_fixed_viewport'], d['center_viewport'],
-                d['viewport_x'], d['viewport_y'],
-                d['chosen_skeletons'],
-                export_local=export_local,
-            )
+            show_batch_confirm_dialog(all_spine_files, lambda loc: ctx.run_async(lambda: do_batch(loc)))
 
-        show_batch_confirm_dialog(all_spine_files, lambda loc: ctx.run_async(lambda: do_batch(loc)))
+        ctx.run_async(scan_folders)
 
     else:
         ui.show_info('No selection', description='Select .spine files or folders containing .spine projects.')
