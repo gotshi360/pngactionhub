@@ -5,7 +5,7 @@ action:
   id: "ap::utilities::vpncheckerSettings"
   type: python
   enable: true
-  script: "vpn_checker_settings.py"
+  script: "vpn_checker_notification_settings.py"
   icon:
     path: icons/vpn.svg
 
