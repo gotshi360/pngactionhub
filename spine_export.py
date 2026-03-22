@@ -209,9 +209,14 @@ def probe_skeletons_sync(project_file: str, spine_exec: str) -> List[str]:
     out = ''
     try:
         kw = _subprocess_kwargs_hidden()
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **kw)
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=90, **kw)
         out = res.stdout or ''
         dprint(out.strip())
+    except subprocess.TimeoutExpired as e:
+        dprint(f'probe_skeletons_sync timed out after 90s')
+        try: e.process.kill()
+        except Exception: pass
+        return []
     except Exception as e:
         dprint(f'probe_skeletons_sync failed: {e}')
         return []
@@ -329,8 +334,22 @@ def show_open_log_prompt(log_path: str):
     d.add_button("Close", callback=lambda dlg: dlg.close())
     d.show()
 
-def run_spine_cli_with_progress(spine_exec: str, project_file: str, output_target: str, export_json: str, progress: ap.Progress, poll_secs: float = 0.5, repaint_nudge: float = None) -> Tuple[bool, str]:
-    # LOG NOW GOES TO OS TEMP DIR (not project/output). Removed on success.
+EXPORT_TIMEOUT_SECS = 120.0  # 2 minutes: if no output file appears, assume export never started
+
+def run_spine_cli_with_progress(
+    spine_exec: str, project_file: str, output_target: str, export_json: str,
+    progress: ap.Progress, poll_secs: float = 0.5, repaint_nudge: float = None,
+    timeout_secs: float = EXPORT_TIMEOUT_SECS, progress_prefix: str = '',
+) -> Tuple[bool, str]:
+    """Run Spine CLI and monitor progress.
+
+    Returns:
+      (True,  '')                    — success
+      (False, log_path)              — CLI exited non-zero; log kept at log_path
+      (False, 'canceled')            — user canceled
+      (False, 'timeout')             — no output file appeared within timeout_secs
+      (False, 'img_path_not_found')  — Spine reported images path not found in live log
+    """
     temp_dir = tempfile.gettempdir()
     fd, log_path = tempfile.mkstemp(prefix='spine_cli_', suffix='.log', dir=temp_dir)
     os.close(fd)
@@ -356,25 +375,45 @@ def run_spine_cli_with_progress(spine_exec: str, project_file: str, output_targe
     except FileNotFoundError:
         logf.close(); ui.show_error('Failed to start Spine CLI', description=spine_exec); return False, ''
 
-    last_probe_t = time.time()
+    start_time = time.time()
+    last_probe_t = start_time
     last_size_mb = -1.0
     stagnant_checks = 0
     active_path: Optional[str] = None
+    special_result: Optional[str] = None
+
+    def _kill_proc():
+        try: p.terminate()
+        except Exception: pass
+        try: p.wait(timeout=3)
+        except Exception:
+            try: p.kill()
+            except Exception: pass
 
     try:
         while True:
             if progress.canceled:
-                try: p.terminate()
-                except Exception: pass
-                try: p.wait(timeout=3)
-                except Exception:
-                    try: p.kill()
-                    except Exception: pass
+                _kill_proc()
                 ui.show_info('Canceled', 'The export has been canceled by the user.')
                 return False, 'canceled'
 
             now = time.time()
             if now - last_probe_t >= poll_secs:
+                # --- Live log check: images path not found ---
+                try:
+                    with open(log_path, 'r', encoding='utf-8', errors='replace') as lf:
+                        log_so_far = lf.read()
+                    if 'images path not found' in log_so_far.lower():
+                        dprint('Detected "images path not found" in live CLI log — killing process')
+                        special_result = 'img_path_not_found'
+                except Exception:
+                    pass
+
+                if special_result:
+                    _kill_proc()
+                    break
+
+                # --- Probe output file for size/speed ---
                 if not active_path:
                     active_path = _probe_current_output(output_target)
                 if not active_path or (active_path and not os.path.exists(active_path)):
@@ -390,13 +429,13 @@ def run_spine_cli_with_progress(spine_exec: str, project_file: str, output_targe
                     dt = now - last_probe_t
                     delta_mb = 0.0 if last_size_mb < 0 else (size_mb - last_size_mb)
                     speed_txt = _human_rate(delta_mb, dt)
-                    progress.set_text(f'Size: {size_mb:.2f} MB  â¢  Write speed: {speed_txt}')
+                    progress.set_text(f'{progress_prefix}Size: {size_mb:.2f} MB  \u2022  Write speed: {speed_txt}')
                     if repaint_nudge is not None: progress.report_progress(repaint_nudge)
                     if last_size_mb >= 0 and size_mb <= last_size_mb + 1e-6: stagnant_checks += 1
                     else: stagnant_checks = 0
                     last_size_mb = size_mb
                 else:
-                    progress.set_text('Size: â  â¢  Write speed: â')
+                    progress.set_text(f'{progress_prefix}Size: \u2014  \u2022  Write speed: \u2014')
                     if repaint_nudge is not None: progress.report_progress(repaint_nudge)
 
                 if stagnant_checks >= 3:
@@ -404,6 +443,14 @@ def run_spine_cli_with_progress(spine_exec: str, project_file: str, output_targe
                     new_cand = _scan_for_active_sidefile(folder or os.getcwd())
                     if new_cand and new_cand != active_path:
                         active_path = new_cand; stagnant_checks = 0
+
+                # --- Timeout: no output file has ever appeared ---
+                elapsed = now - start_time
+                if elapsed > timeout_secs and last_size_mb < 0:
+                    dprint(f'Export timeout after {elapsed:.0f}s with no output file — killing process')
+                    special_result = 'timeout'
+                    _kill_proc()
+                    break
 
                 last_probe_t = now
 
@@ -419,8 +466,11 @@ def run_spine_cli_with_progress(spine_exec: str, project_file: str, output_targe
             logf.flush(); logf.close()
         except Exception: pass
 
+    if special_result:
+        # Return log path alongside sentinel so caller can write a trace
+        return False, f'{special_result}:{log_path}'
+
     if p.returncode != 0:
-        # Keep the temp log and return its path
         return False, log_path
 
     # Success: dprint the CLI output for diagnostics, then delete the log
@@ -462,9 +512,15 @@ def check_missing_images_in_project(project_file: str, spine_exec: str) -> dict:
 
     try:
         kw = _subprocess_kwargs_hidden()
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **kw)
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=90, **kw)
         result['cli_out'] = res.stdout or ''
         dprint(result['cli_out'].strip())
+    except subprocess.TimeoutExpired as e:
+        dprint('check_missing_images: CLI timed out after 90s')
+        try: e.process.kill()
+        except Exception: pass
+        result['cli_out'] = 'CLI timed out during missing image check'
+        return result
     except Exception as e:
         dprint(f'check_missing_images: CLI failed: {e}')
         result['cli_out'] = f'CLI error: {e}'
@@ -526,10 +582,12 @@ def write_missing_images_trace(trace_path: str, project_file: str, check_result:
 PREVIEW_STATUS_ATTR = 'Preview Status'
 # apsync.TagColor members must be used — plain strings are silently ignored.
 _PREVIEW_TAGS = [
-    ('Done',          aps.TagColor.green),
-    ('Missing IMG',   aps.TagColor.yellow),
-    ('Export Failed', aps.TagColor.red),
-    ('No Anim',       aps.TagColor.blue),
+    ('Done',               aps.TagColor.green),
+    ('Missing IMG',        aps.TagColor.yellow),
+    ('Export Failed',      aps.TagColor.red),
+    ('No Anim',            aps.TagColor.blue),
+    ('Export Not Started', aps.TagColor.purple),
+    ('IMG Path Not Found', aps.TagColor.orange),
 ]
 
 def ensure_preview_status_attribute(api):
@@ -577,11 +635,39 @@ def set_folder_preview_status(api, folder_path: str, status: str):
         dprint(f"Failed to set Preview Status on '{folder_path}': {e}")
 
 
+def _write_status_trace(trace_path: str, project_file: str, status: str, detail: str = '', cli_log_path: str = ''):
+    """Write a trace file for any export outcome, including special failure modes."""
+    import datetime
+    lines = [
+        'Spine Export Trace',
+        '=' * 60,
+        f'Project:  {os.path.basename(project_file)}',
+        f'Date:     {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}',
+        f'Status:   {status}',
+    ]
+    if detail:
+        lines += ['', detail]
+    if cli_log_path and os.path.isfile(cli_log_path):
+        try:
+            with open(cli_log_path, 'r', encoding='utf-8', errors='replace') as f:
+                cli_content = f.read().strip()
+            if cli_content:
+                lines += ['', 'CLI OUTPUT:']
+                lines += [f'  {ln}' for ln in cli_content.splitlines()]
+        except Exception:
+            pass
+    try:
+        with open(trace_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(lines))
+        dprint(f'Wrote status trace: {trace_path}')
+    except Exception as e:
+        dprint(f'Failed to write status trace: {e}')
+
+
 def export_worker(selected_files: List[str], width: int, height: int, fps: float, bg: str, single_file: bool, video_format: str, user_output_override: str, use_fixed_viewport: bool, center_viewport: bool, viewport_x: int, viewport_y: int, chosen_skeletons: Optional[List[str]], export_local: bool = False):
-    # When chosen_skeletons is None we probe each project at runtime, so the
-    # total job count is unknown upfront — use an infinite progress bar.
     auto_probe = (chosen_skeletons is None)
-    progress = ap.Progress('Spine Export', infinite=auto_probe)
+    total_projs = len(selected_files)
+    progress = ap.Progress('Spine Export', infinite=(total_projs == 0))
     progress.set_cancelable(True)
 
     spine_exec = get_spine_executable()
@@ -602,10 +688,15 @@ def export_worker(selected_files: List[str], width: int, height: int, fps: float
         total_jobs = len(selected_files) * max(1, len(chosen_skeletons)) if not auto_probe else None
         job_index = 0
 
-        for proj in selected_files:
+        for proj_index, proj in enumerate(selected_files, start=1):
             proj_dir = os.path.dirname(proj)
             base_name = os.path.splitext(os.path.basename(proj))[0]
             ext = '.mov' if video_format == 'mov' else '.avi'
+            proj_prefix = f'[{proj_index}/{total_projs}]  {base_name}  \u2014  '
+
+            # Report project-level progress at the start of each project
+            progress.report_progress((proj_index - 1) / max(1, total_projs))
+            progress.set_text(f'{proj_prefix}Starting...')
 
             # --- Local-drive export setup ---
             actual_proj = proj
@@ -614,7 +705,7 @@ def export_worker(selected_files: List[str], width: int, height: int, fps: float
             files_before_export: set = set()
 
             if export_local:
-                progress.set_text(f'Copying to local drive: {os.path.basename(proj_dir)}')
+                progress.set_text(f'{proj_prefix}Copying to local drive...')
                 try:
                     local_tmp_parent = tempfile.mkdtemp(prefix='spine_local_')
                     tmp_copy = os.path.join(local_tmp_parent, os.path.basename(proj_dir))
@@ -622,23 +713,26 @@ def export_worker(selected_files: List[str], width: int, height: int, fps: float
                     actual_proj_dir = tmp_copy
                     actual_proj = os.path.join(tmp_copy, os.path.basename(proj))
                     files_before_export = {os.path.join(actual_proj_dir, n) for n in os.listdir(actual_proj_dir)}
-                    dprint(f'Local copy: {proj_dir} → {tmp_copy}')
+                    dprint(f'Local copy: {proj_dir} \u2192 {tmp_copy}')
                 except Exception as e:
                     dprint(f'Failed to copy to local drive: {e}')
                     ui.show_error('Local copy failed', description=str(e))
                     local_tmp_parent = None  # fall back to original paths
 
             if auto_probe:
-                progress.set_text(f'Probing skeletons: {os.path.basename(actual_proj)}')
+                progress.set_text(f'{proj_prefix}Probing skeletons...')
                 probed = probe_skeletons_sync(actual_proj, spine_exec)
                 skeletons_to_do = probed if len(probed) > 1 else [None]
-                dprint(f'Auto-probe {os.path.basename(actual_proj)}: {probed} → skeletons_to_do={skeletons_to_do}')
+                dprint(f'Auto-probe {os.path.basename(actual_proj)}: {probed} \u2192 skeletons_to_do={skeletons_to_do}')
             else:
                 skeletons_to_do = chosen_skeletons
 
             # Per-project status accumulators
             proj_failed = False
             proj_canceled = False
+            proj_timeout = False
+            proj_img_path_error = False
+            special_cli_log: str = ''  # log path from a special-result kill
 
             for sk in skeletons_to_do:
                 job_index += 1
@@ -673,15 +767,17 @@ def export_worker(selected_files: List[str], width: int, height: int, fps: float
 
                 ensure_dir(os.path.dirname(target) if looks_like_file(target) else target)
 
-                label = f'{os.path.basename(proj)}'
-                if sk: label += f' · skeleton: {sk}'
-                if auto_probe:
-                    progress.set_text(f'Exporting: {label}')
+                sk_label = f'skeleton: {sk}' if sk else ''
+                if not auto_probe:
+                    progress.set_text(f'{proj_prefix}{job_index}/{total_jobs} \u2192 Exporting {sk_label}')
                 else:
-                    progress.set_text(f'{job_index}/{total_jobs} → Exporting: {label}')
+                    progress.set_text(f'{proj_prefix}Exporting {sk_label}')
 
                 repaint_nudge = None if auto_probe else ((job_index - 1) / max(1.0, float(total_jobs)) + 0.0001)
-                ok, maybe_log = run_spine_cli_with_progress(spine_exec, actual_proj, target, temp_json, progress, 0.5, repaint_nudge=repaint_nudge)
+                ok, maybe_log = run_spine_cli_with_progress(
+                    spine_exec, actual_proj, target, temp_json, progress, 0.5,
+                    repaint_nudge=repaint_nudge, progress_prefix=proj_prefix,
+                )
 
                 try: os.remove(temp_json)
                 except Exception: pass
@@ -690,9 +786,21 @@ def export_worker(selected_files: List[str], width: int, height: int, fps: float
                     proj_canceled = True
                     break
 
+                # Detect special sentinel codes returned as 'sentinel:log_path'
+                if maybe_log.startswith('timeout:'):
+                    proj_timeout = True
+                    special_cli_log = maybe_log[len('timeout:'):]
+                    dprint(f'Timeout detected for {os.path.basename(proj)} — moving to next')
+                    break
+                if maybe_log.startswith('img_path_not_found:'):
+                    proj_img_path_error = True
+                    special_cli_log = maybe_log[len('img_path_not_found:'):]
+                    dprint(f'IMG path not found for {os.path.basename(proj)} — moving to next')
+                    break
+
                 if not ok:
                     proj_failed = True
-                    label_failed = f'{os.path.basename(proj)}{(" · " + sk) if sk else ""}'
+                    label_failed = f'{os.path.basename(proj)}{(" \u00b7 " + sk) if sk else ""}'
                     if maybe_log:
                         dprint(f'Export failed for {label_failed} — log: {maybe_log}')
                         ui.show_error(f'Export failed: {label_failed}', description=f'Log saved to: {maybe_log}')
@@ -709,24 +817,45 @@ def export_worker(selected_files: List[str], width: int, height: int, fps: float
                 if not auto_probe:
                     progress.report_progress(job_index / float(total_jobs))
 
-            # Check for missing images and write trace file
-            check_result: dict = {}
-            if not proj_failed and not proj_canceled:
-                progress.set_text(f'Checking for missing images: {os.path.basename(actual_proj)}')
+            trace_path = os.path.join(actual_proj_dir, f'{base_name}_trace.txt')
+
+            if proj_timeout or proj_img_path_error:
+                # Write trace with CLI log content, then move on — no missing image check
+                if proj_timeout:
+                    _write_status_trace(trace_path, actual_proj, 'Export Not Started',
+                                        f'No output file was detected after {EXPORT_TIMEOUT_SECS:.0f}s. '
+                                        'The Spine CLI may have launched but never started encoding.',
+                                        cli_log_path=special_cli_log)
+                else:
+                    _write_status_trace(trace_path, actual_proj, 'IMG Path Not Found',
+                                        'Spine reported that the images path could not be found. '
+                                        'Check that the images folder exists next to the project.',
+                                        cli_log_path=special_cli_log)
+                try:
+                    if special_cli_log and os.path.isfile(special_cli_log):
+                        os.remove(special_cli_log)
+                except Exception: pass
+                check_result: dict = {}
+            elif proj_failed or proj_canceled:
+                check_result = {}
+                _write_status_trace(trace_path, actual_proj,
+                                    'Canceled' if proj_canceled else 'Export Failed')
+            else:
+                # Successful export: run missing-image check and always write trace
+                progress.set_text(f'{proj_prefix}Checking for missing images...')
                 check_result = check_missing_images_in_project(actual_proj, spine_exec)
-                trace_path = os.path.join(actual_proj_dir, f'{base_name}_missing_images.txt')
                 write_missing_images_trace(trace_path, actual_proj, check_result)
 
-            # Move exported files back from local temp copy to original folder, then clean up
+            # Move exported files + trace back from local temp copy, then clean up
             if export_local and local_tmp_parent and os.path.isdir(actual_proj_dir):
-                progress.set_text(f'Moving exported files back: {os.path.basename(proj_dir)}')
+                progress.set_text(f'{proj_prefix}Moving exported files back...')
                 try:
                     for name in os.listdir(actual_proj_dir):
                         full = os.path.join(actual_proj_dir, name)
-                        if full not in files_before_export and os.path.isfile(full):
+                        if full not in files_before_export and (os.path.isfile(full) or os.path.isdir(full)):
                             dest = os.path.join(proj_dir, name)
                             shutil.move(full, dest)
-                            dprint(f'Moved {full} → {dest}')
+                            dprint(f'Moved {full} \u2192 {dest}')
                 except Exception as e:
                     dprint(f'Failed to move files back: {e}')
                 try:
@@ -737,13 +866,20 @@ def export_worker(selected_files: List[str], width: int, height: int, fps: float
 
             # Write Preview Status attribute for this project's folder
             if _api is not None and not proj_canceled:
-                if proj_failed:
+                if proj_timeout:
+                    folder_status = 'Export Not Started'
+                elif proj_img_path_error:
+                    folder_status = 'IMG Path Not Found'
+                elif proj_failed:
                     folder_status = 'Export Failed'
                 elif check_result.get('missing'):
                     folder_status = 'Missing IMG'
                 else:
                     folder_status = 'Done'
                 set_folder_preview_status(_api, proj_dir, folder_status)
+
+            # Update progress to reflect this project is done
+            progress.report_progress(proj_index / max(1, total_projs))
 
             if proj_canceled:
                 ui.show_info('Canceled', 'The export has been canceled by the user.')
@@ -778,16 +914,68 @@ def find_spine_files_in_folders(folders: List[str]) -> List[str]:
         _scan(folder)
     return found
 
-def show_batch_confirm_dialog(spine_files: List[str], on_confirm: Callable[[bool], None]):
+def show_batch_settings_dialog(export_local: bool, on_done: Callable):
+    """Show the export settings dialog for a batch run.
+    Calls on_done(export_local, settings_dict) when the user clicks Export."""
+    d = ap.Dialog()
+    d.icon = ctx.icon
+    d.title = 'Batch Export Settings'
+    d.add_info('Configure export settings for all projects in this batch.')
+
+    d.add_text('FPS\t').add_input('60', var='fps', width=100)
+    d.add_text('Background\t').add_dropdown('black', ['black', 'white', 'transparent'], var='bg_choice')
+    d.add_text('Output\t').add_dropdown('single', ['single', 'separate-per-animation'], var='out_mode')
+    d.add_text('Format\t').add_dropdown('mov', ['mov', 'avi'], var='format')
+    d.add_checkbox(False, var='fixed_viewport', text='Use Fixed Viewport (constant crop size)')
+    d.add_text('Width\t').add_input('1920', var='res_w', width=100)
+    d.add_text('Height\t').add_input('1080', var='res_h', width=100)
+    d.start_section('Advanced settings', folded=True)
+    d.add_checkbox(True, var='center_viewport', text='Center viewport on (0,0)')
+    d.add_text('Viewport origin X\t').add_input('0', var='viewport_x', width=100)
+    d.add_text('Viewport origin Y\t').add_input('0', var='viewport_y', width=100)
+    d.add_empty()
+    d.add_text('Custom BG color \t').add_input('', placeholder='#rrggbb', var='bg_hex', width=100)
+    d.add_text('Output override \t').add_input('', placeholder='C:\\Animation', var='output_override')
+    d.end_section()
+
+    def on_export(dialog: ap.Dialog):
+        fps = float(dialog.get_value('fps') or 60)
+        bg_choice = dialog.get_value('bg_choice') or 'black'
+        custom_hex = (dialog.get_value('bg_hex') or '').strip()
+        bg = custom_hex if custom_hex else bg_choice
+        mode = dialog.get_value('out_mode') or 'single'
+        single = (mode == 'single')
+        fmt = dialog.get_value('format') or 'mov'
+        fixed = bool(dialog.get_value('fixed_viewport'))
+        width = int(dialog.get_value('res_w') or 1920)
+        height = int(dialog.get_value('res_h') or 1080)
+        center = bool(dialog.get_value('center_viewport'))
+        vx = int(dialog.get_value('viewport_x') or 0)
+        vy = int(dialog.get_value('viewport_y') or 0)
+        override = (dialog.get_value('output_override') or '').strip()
+        dialog.close()
+        on_done(export_local, {
+            'fps': fps, 'bg': bg, 'single_file': single, 'video_format': fmt,
+            'use_fixed_viewport': fixed, 'width': width, 'height': height,
+            'center_viewport': center, 'viewport_x': vx, 'viewport_y': vy,
+            'user_output_override': override, 'chosen_skeletons': None,
+        })
+
+    d.add_button('Export', callback=on_export)
+    d.add_button('Cancel', callback=lambda dlg: dlg.close())
+    d.show()
+
+
+def show_batch_confirm_dialog(spine_files: List[str], on_confirm: Callable):
     """Show a confirmation dialog listing found .spine files before batch export.
-    Calls on_confirm(export_local) when the user clicks Export All."""
+    Calls on_confirm(export_local, settings_or_none) when the user is ready to export.
+    settings_or_none is None when using default settings, or a dict of export settings."""
     d = ap.Dialog()
     d.icon = ctx.icon
     d.title = 'Batch Spine Export'
 
     count = len(spine_files)
     d.add_info(f'Found {count} Spine project{"s" if count != 1 else ""} in the selected folder{"s" if count != 1 else ""}.')
-    d.add_info('Export all animations for each project with default settings?\n(60 fps · MOV · 1920×1080 · black background · saved alongside each project)')
 
     d.add_empty()
     for f in spine_files:
@@ -796,9 +984,20 @@ def show_batch_confirm_dialog(spine_files: List[str], on_confirm: Callable[[bool
 
     d.add_empty()
     d.add_checkbox(True, var='export_local', text='Export on Local Drive')
+    d.add_checkbox(False, var='custom_settings', text='Configure export settings before starting')
 
     d.add_empty()
-    d.add_button('Export All', callback=lambda dlg: (on_confirm(bool(dlg.get_value('export_local'))), dlg.close()))
+
+    def on_export(dlg: ap.Dialog):
+        exp_local = bool(dlg.get_value('export_local'))
+        use_custom = bool(dlg.get_value('custom_settings'))
+        dlg.close()
+        if use_custom:
+            show_batch_settings_dialog(exp_local, on_confirm)
+        else:
+            on_confirm(exp_local, None)
+
+    d.add_button('Export All', callback=on_export)
     d.add_button('Cancel', callback=lambda dlg: dlg.close())
     d.show()
 
@@ -966,20 +1165,20 @@ def main():
                 tag_no_anim(empty_folders)
                 return
 
-            def do_batch(export_local: bool):
+            def do_batch(export_local: bool, custom_settings: Optional[dict]):
                 tag_no_anim(empty_folders)
-                d = BATCH_DEFAULTS
+                s = custom_settings if custom_settings else BATCH_DEFAULTS
                 export_worker(
                     all_spine_files,
-                    d['width'], d['height'], d['fps'], d['bg'],
-                    d['single_file'], d['video_format'], d['user_output_override'],
-                    d['use_fixed_viewport'], d['center_viewport'],
-                    d['viewport_x'], d['viewport_y'],
-                    d['chosen_skeletons'],
+                    s['width'], s['height'], s['fps'], s['bg'],
+                    s['single_file'], s['video_format'], s['user_output_override'],
+                    s['use_fixed_viewport'], s['center_viewport'],
+                    s['viewport_x'], s['viewport_y'],
+                    s.get('chosen_skeletons'),
                     export_local=export_local,
                 )
 
-            show_batch_confirm_dialog(all_spine_files, lambda loc: ctx.run_async(lambda: do_batch(loc)))
+            show_batch_confirm_dialog(all_spine_files, lambda loc, cfg: ctx.run_async(lambda: do_batch(loc, cfg)))
 
         ctx.run_async(scan_folders)
 

@@ -1,0 +1,14 @@
+version: "1.0"
+
+action:
+  name: "VPN Checker Settings"
+  id: "ap::utilities::vpncheckerSettings"
+  type: python
+  enable: true
+  script: "vpn_checker_settings.py"
+  icon:
+    path: icons/vpn.svg
+
+  register:
+    folder:
+      enable: true

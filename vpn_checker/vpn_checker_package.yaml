@@ -13,5 +13,6 @@ action:
 
   actions:
     - ap::utilities::vpnchecker
+    - ap::utilities::vpncheckerSettings
 
   settings: vpn_checker_settings.py
