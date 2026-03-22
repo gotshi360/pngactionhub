@@ -1,0 +1,14 @@
+version: "1.0"
+
+action:
+  name: "Anchorpoint Guide"
+  id: "ap::utilities::anchorpointhub"
+  type: python
+  enable: true
+  script: "anchorpoint_hub.py"
+  icon:
+    path: "icons/link-icon.svg"
+
+  register:
+    workspace_overview:
+      enable: true

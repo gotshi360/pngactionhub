@@ -12,3 +12,5 @@ action:
   register:
     folder:
       enable: true
+    workspace_overview:
+      enable: true
