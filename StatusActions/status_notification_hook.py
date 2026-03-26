@@ -2,6 +2,10 @@ import anchorpoint
 import pathlib
 import os
 
+# Keep references alive so the OS notification callback is not garbage-collected
+# before the user clicks it.
+_pending = []
+
 
 def on_custom_notification(message, meta_data, project_id, project_path, ctx):
     print(f"[StatusAction] on_custom_notification fired — project_path={project_path!r}, meta_data={meta_data!r}")
@@ -23,17 +27,28 @@ def on_custom_notification(message, meta_data, project_id, project_path, ctx):
     full_path = str(pathlib.Path(project_path) / relative_path)
     print(f"[StatusAction] Reconstructed path: {full_path!r}")
 
+    ui = anchorpoint.UI()
+
     def navigate():
-        print(f"[StatusAction] Navigating to: {full_path!r}")
-        ui = anchorpoint.UI()
+        print(f"[StatusAction] navigate() called for: {full_path!r}")
+        print(f"[StatusAction] isfile={os.path.isfile(full_path)}, isdir={os.path.isdir(full_path)}")
+        nav_ui = anchorpoint.UI()
         if os.path.isfile(full_path):
-            ui.navigate_to_file(full_path)
+            print(f"[StatusAction] Calling navigate_to_file")
+            nav_ui.navigate_to_file(full_path)
         elif os.path.isdir(full_path):
-            ui.navigate_to_folder(full_path)
+            print(f"[StatusAction] Calling navigate_to_folder")
+            nav_ui.navigate_to_folder(full_path)
         else:
             print(f"[StatusAction] Path does not exist on this machine: {full_path!r}")
+        # Remove from pending after navigation
+        _pending[:] = [(u, n) for (u, n) in _pending if n is not navigate]
 
-    anchorpoint.UI().show_system_notification(
+    # Store both ui and navigate to prevent garbage collection
+    _pending.append((ui, navigate))
+    print(f"[StatusAction] Pending notifications: {len(_pending)}")
+
+    ui.show_system_notification(
         "Anchorpoint",
         message,
         callback=navigate,
