@@ -1,0 +1,16 @@
+version: "1.0"
+
+action:
+  name: "Status Actions: Settings"
+  id: "ap::status::settings"
+  type: python
+  script: "status_settings.py"
+  description: "Configure which Status Action items appear in the context menu."
+  icon:
+    path: ":/icons/settings.svg"
+
+  register:
+    file:
+      enable: true
+    folder:
+      enable: true

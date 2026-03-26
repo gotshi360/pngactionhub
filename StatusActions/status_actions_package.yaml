@@ -1,0 +1,16 @@
+version: "1.0"
+
+action:
+  name: "Status Actions"
+  id: "ap::package::status_actions"
+  type: package
+  enable: true
+  description: "Set file and folder status attributes (Done, In Progress, Pending Review) and notify assigned team members via in-app notifications."
+  icon:
+    path: "icons/done.svg"
+  actions:
+    - ap::status::set_done
+    - ap::status::set_inprogress
+    - ap::status::set_review
+    - ap::status::settings
+    - ap::status::notification_hook

@@ -4,6 +4,13 @@ import os
 import pathlib
 
 
+# ── Visibility Hook ───────────────────────────────────────────────────────────
+
+def on_is_action_enabled(path, type, ctx):
+    settings = apsync.Settings("StatusActions")
+    return bool(settings.get("show_inprogress", True))
+
+
 # ── Helper ────────────────────────────────────────────────────────────────────
 
 def get_user_ids_from_attribute(path, attribute_name, ctx):
@@ -76,12 +83,13 @@ if __name__ == "__main__":
             anchorpoint.schedule_custom_notification(
                 ctx.project_id,
                 ctx.workspace_id,
-                message,
+                "",
                 user_ids,
                 {
                     "source":        "status_action",
                     "relative_path": relative_path,
                     "status":        "In Progress",
+                    "message":       message,
                 },
             )
             ui.show_success("Status Updated", "Status set to 'In Progress'. Assignee(s) notified.")

@@ -11,6 +11,6 @@ action:
 
   register:
     file:
-      enable: true
+      enable: "set_status_review.py"
     folder:
-      enable: true
+      enable: "set_status_review.py"
