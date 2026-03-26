@@ -1,0 +1,7 @@
+version: "1.0"
+
+action:
+  name: "Status Notification Hook"
+  id: "ap::status::notification_hook"
+  type: python
+  script: "status_notification_hook.py"

@@ -1,0 +1,16 @@
+version: "1.0"
+
+action:
+  name: "Set Status: In Progress"
+  id: "ap::status::set_inprogress"
+  type: python
+  script: "set_status_inprogress.py"
+  description: "Sets the Status attribute to 'In Progress' and notifies the assigned user(s)."
+  icon:
+    path: "icons/in_progress.svg"
+
+  register:
+    file:
+      enable: true
+    folder:
+      enable: true

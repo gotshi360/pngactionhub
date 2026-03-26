@@ -1,0 +1,16 @@
+version: "1.0"
+
+action:
+  name: "Set Status: Done"
+  id: "ap::status::set_done"
+  type: python
+  script: "set_status_done.py"
+  description: "Sets the Status attribute to 'Done' and notifies the assigned user(s)."
+  icon:
+    path: "icons/done.svg"
+
+  register:
+    file:
+      enable: true
+    folder:
+      enable: true

@@ -1,0 +1,16 @@
+version: "1.0"
+
+action:
+  name: "Set Status: Review"
+  id: "ap::status::set_review"
+  type: python
+  script: "set_status_review.py"
+  description: "Sets the Status attribute to 'Pending Review' and notifies the assigned reviewer(s)."
+  icon:
+    path: "icons/review.svg"
+
+  register:
+    file:
+      enable: true
+    folder:
+      enable: true
