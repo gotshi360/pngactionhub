@@ -27,8 +27,6 @@ def on_custom_notification(message, meta_data, project_id, project_path, ctx):
     full_path = str(pathlib.Path(project_path) / relative_path)
     print(f"[StatusAction] Reconstructed path: {full_path!r}")
 
-    notification_message = meta_data.get("message", message)
-
     ui = anchorpoint.UI()
 
     def navigate():
@@ -52,6 +50,6 @@ def on_custom_notification(message, meta_data, project_id, project_path, ctx):
 
     ui.show_system_notification(
         "Anchorpoint",
-        notification_message,
+        message,
         callback=navigate,
     )

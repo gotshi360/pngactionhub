@@ -9,8 +9,3 @@ action:
   icon:
     path: ":/icons/settings.svg"
 
-  register:
-    file:
-      enable: true
-    folder:
-      enable: true

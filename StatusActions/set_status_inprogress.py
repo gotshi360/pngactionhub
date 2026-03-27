@@ -83,13 +83,12 @@ if __name__ == "__main__":
             anchorpoint.schedule_custom_notification(
                 ctx.project_id,
                 ctx.workspace_id,
-                "",
+                message,
                 user_ids,
                 {
                     "source":        "status_action",
                     "relative_path": relative_path,
                     "status":        "In Progress",
-                    "message":       message,
                 },
             )
             ui.show_success("Status Updated", "Status set to 'In Progress'. Assignee(s) notified.")

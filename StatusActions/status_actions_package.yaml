@@ -14,3 +14,5 @@ action:
     - ap::status::set_review
     - ap::status::settings
     - ap::status::notification_hook
+
+  settings: status_settings.py
