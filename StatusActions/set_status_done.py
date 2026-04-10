@@ -9,14 +9,15 @@ import pathlib
 # ── Visibility Hook ───────────────────────────────────────────────────────────
 
 def on_is_action_enabled(path, type, ctx):
-    settings = apsync.Settings("StatusActions")
-    if not settings.get("show_done", True):
+    local_settings = apsync.Settings("StatusActions")
+    if not local_settings.get("show_done", True):
         return False
-    return _is_role_allowed(settings, ctx)
+    return _is_role_allowed(ctx)
 
 
-def _is_role_allowed(settings, ctx):
-    visible_to = settings.get("visible_to", "Everyone")
+def _is_role_allowed(ctx):
+    shared_settings = apsync.SharedSettings(ctx.workspace_id, "StatusActions")
+    visible_to = shared_settings.get("visible_to", "Everyone")
     if visible_to == "Everyone":
         return True
     access = apsync.get_workspace_access(ctx.workspace_id)
