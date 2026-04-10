@@ -8,7 +8,21 @@ import pathlib
 
 def on_is_action_enabled(path, type, ctx):
     settings = apsync.Settings("StatusActions")
-    return bool(settings.get("show_review", True))
+    if not settings.get("show_review", True):
+        return False
+    return _is_role_allowed(settings, ctx)
+
+
+def _is_role_allowed(settings, ctx):
+    visible_to = settings.get("visible_to", "Everyone")
+    if visible_to == "Everyone":
+        return True
+    access = apsync.get_workspace_access(ctx.workspace_id)
+    if visible_to == "Owner only":
+        return access == apsync.AccessLevel.Owner
+    if visible_to == "Owner & Admins only":
+        return access in (apsync.AccessLevel.Owner, apsync.AccessLevel.Admin)
+    return True
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────
@@ -76,9 +90,9 @@ if __name__ == "__main__":
             ui.show_info("No Reviewer", "Please select a reviewer first.")
         else:
             message = (
-                f"👁️ <b>APPROVAL PENDING</b> — "
-                f"A Review has been requested for '<font color='#dcc9f6'><b>{filename}</b></font>' from '<font color='#dcc9f6'><b>{project_name}</b></font>' "
-                f"by <font color='#dcc9f6'><b>{username}</b></font>."
+                f"🔍 APPROVAL PENDING — "
+                f"A Review has been requested for '{filename}' from '{project_name}' "
+                f"by {username}."
             )
             anchorpoint.schedule_custom_notification(
                 ctx.project_id,
