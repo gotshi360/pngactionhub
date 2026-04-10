@@ -20,7 +20,6 @@ def _is_role_allowed(ctx):
         return True
     access = apsync.get_workspace_access(ctx.workspace_id)
     access_str = str(access).lower()
-    print(f"[StatusAction] Current user access level: {access_str!r}")
     if visible_to == "Owner only":
         return "owner" in access_str
     if visible_to == "Owner & Admins only":
