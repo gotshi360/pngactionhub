@@ -11,4 +11,4 @@ action:
 
   register:
     folder:
-      enable: true
+      enable: fpt_project_link_settings.py

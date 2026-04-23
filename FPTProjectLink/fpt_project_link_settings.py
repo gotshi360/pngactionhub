@@ -27,6 +27,13 @@ def _is_admin_or_owner(ctx):
         return False
 
 
+def on_is_action_enabled(path, type, ctx):
+    """Show the settings menu entry only for project owners and admins."""
+    if not ctx.project_id or not ctx.workspace_id:
+        return False
+    return _is_admin_or_owner(ctx)
+
+
 def _save(dialog):
     ctx = anchorpoint.get_context()
     url = dialog.get_value("url").strip()
