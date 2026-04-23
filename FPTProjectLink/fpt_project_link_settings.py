@@ -9,22 +9,11 @@ def _get_settings(ctx):
 
 
 def _is_admin_or_owner(ctx):
-    """Return True if the current user is a project admin, owner, or workspace admin."""
-    try:
-        members = apsync.get_project_members(ctx.workspace_id, ctx.project_id)
-        for member in members:
-            if member.id == ctx.user_id:
-                level = str(member.access_level).lower()
-                print(f"FPT Project Link [settings]: user access level = {level}")
-                return "admin" in level or "owner" in level
-        # Fallback: check workspace-level role (catches workspace owners)
-        workspace_access = apsync.get_workspace_access(ctx.workspace_id)
-        level = str(workspace_access).lower()
-        print(f"FPT Project Link [settings]: workspace access level = {level}")
-        return "admin" in level or "owner" in level
-    except Exception as e:
-        print(f"FPT Project Link [settings]: error checking access level: {e}")
-        return False
+    """Return True if the current user is a workspace owner or admin."""
+    access = apsync.get_workspace_access(ctx.workspace_id)
+    access_str = str(access).lower()
+    print(f"FPT Project Link [settings]: workspace access = {access_str}")
+    return "owner" in access_str or "admin" in access_str
 
 
 def on_is_action_enabled(path, type, ctx):
