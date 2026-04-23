@@ -1,0 +1,14 @@
+version: "1.0"
+
+action:
+  name: "FPT Project Link"
+  id: "fpt::project_link"
+  type: python
+  script: "fpt_project_link.py"
+  description: "Opens the configured project link in your browser."
+  icon:
+    path: "fpt_project_link.svg"
+
+  register:
+    sidebar:
+      enable: fpt_project_link.py

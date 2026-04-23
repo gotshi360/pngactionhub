@@ -1,0 +1,13 @@
+version: "1.0"
+
+action:
+  name: "FPT Project Link"
+  id: "fpt::package::project_link"
+  type: package
+  enable: true
+  description: "Adds a customizable per-project sidebar link to any external URL (e.g. your Flow Production Tracking tool or project management site). Owners and admins configure the link and visibility per project via the folder context menu."
+  icon:
+    path: "fpt_project_link.svg"
+  actions:
+    - fpt::project_link
+    - fpt::project_link_settings

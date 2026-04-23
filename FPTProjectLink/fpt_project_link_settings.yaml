@@ -1,0 +1,14 @@
+version: "1.0"
+
+action:
+  name: "FPT Project Link — Settings"
+  id: "fpt::project_link_settings"
+  type: python
+  script: "fpt_project_link_settings.py"
+  description: "Configure the FPT Project Link URL and sidebar visibility for this project. Accessible to project owners and admins only."
+  icon:
+    path: "fpt_project_link.svg"
+
+  register:
+    folder:
+      enable: true
