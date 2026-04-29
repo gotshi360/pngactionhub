@@ -1,0 +1,15 @@
+version: "1.0"
+
+action:
+  name: "GIT LFS Push"
+  id: "playngo::git::lfs_push"
+  type: python
+  enable: true
+  script: "git_lfs_push.py"
+  description: "Push all LFS objects to origin (git lfs push origin --all)"
+  icon:
+    path: icons/git_lfs_push.svg
+
+  register:
+    folder:
+      enable: git_lfs_push.py

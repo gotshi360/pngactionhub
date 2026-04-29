@@ -1,0 +1,20 @@
+version: "1.0"
+
+action:
+  name: "Git Repo Settings"
+  id: "playngo::gitea::repo_settings"
+  type: python
+  enable: true
+  script: "git_repo_settings.py"
+  settings: "git_repo_settings_settings.py"
+  icon:
+    path: :/icons/action.svg
+
+  python_packages:
+    - requests
+
+  register:
+    folder:
+      enable: git_repo_settings.py
+    workspace_overview:
+      enable: false

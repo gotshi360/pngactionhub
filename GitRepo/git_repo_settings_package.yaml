@@ -1,0 +1,22 @@
+version: "1.0"
+
+action:
+  name: "Git Repo Settings Package v1.0"
+  id: "playngo::package::gitea_repo_settings"
+  type: package
+  enable: true
+  author: "Play'n GO"
+  description: "Edit Gitea repository visibility (public/private) and description directly from Anchorpoint."
+
+  platforms:
+    - win
+    - mac
+
+  icon:
+    path: :/icons/action.svg
+
+  actions:
+    - playngo::gitea::repo_settings
+    - playngo::git::lfs_push
+
+  settings: git_repo_settings_settings.py

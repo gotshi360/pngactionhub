@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Tea cup body -->
+  <path d="M4 8 H16 L14.5 18 Q14 20 12 20 H8 Q6 20 5.5 18 Z"/>
+  <!-- Cup handle -->
+  <path d="M16 10 Q20 10 20 13 Q20 16 16 16"/>
+  <!-- Steam left -->
+  <path d="M7 6 Q7.5 4.5 7 3"/>
+  <!-- Steam middle -->
+  <path d="M10 5.5 Q10.5 4 10 2.5"/>
+  <!-- Steam right -->
+  <path d="M13 6 Q13.5 4.5 13 3"/>
+  <!-- Upload arrow inside cup (LFS push) -->
+  <line x1="10" y1="16" x2="10" y2="11"/>
+  <polyline points="8,13 10,11 12,13"/>
+</svg>
