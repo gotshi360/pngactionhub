@@ -1,0 +1,10 @@
+version: "1.0"
+
+action:
+  name: "Project Links: Settings"
+  id: "ap::project_links::settings"
+  type: python
+  script: "project_links_settings.py"
+  description: "Configure the GDD button label and server base URL for the Project Links package."
+  icon:
+    path: ":/icons/settings.svg"

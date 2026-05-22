@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Open book / GDD document -->
+  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+  <!-- Text lines -->
+  <line x1="8" y1="8"  x2="16" y2="8"/>
+  <line x1="8" y1="12" x2="16" y2="12"/>
+  <line x1="8" y1="16" x2="12" y2="16"/>
+  <!-- External link arrow (top-right corner) -->
+  <polyline points="17 3 21 3 21 7"/>
+  <line x1="21" y1="3" x2="16" y2="8"/>
+</svg>

@@ -1,0 +1,17 @@
+version: "1.0"
+
+action:
+  name: "GDD"
+  id: "ap::project_links::gdd"
+  type: python
+  script: "gdd_link.py"
+  description: "Opens the Game Design Document for the current project. Reads asset-### from the project description and resolves the correct GDD URL automatically."
+  icon:
+    path: "icons/gdd_link.svg"
+
+  python_packages:
+    - requests
+
+  register:
+    sidebar:
+      enable: true

@@ -1,0 +1,15 @@
+version: "1.0"
+
+action:
+  name: "Project Links"
+  id: "ap::package::project_links"
+  type: package
+  enable: true
+  description: "Automatically generates sidebar link buttons for the current project. Reads the asset ID from the project description (e.g. asset-1048) and resolves the correct GDD URL by scanning the GDD server."
+  icon:
+    path: "icons/gdd_link.svg"
+  actions:
+    - ap::project_links::gdd
+    - ap::project_links::settings
+
+  settings: project_links_settings.py
