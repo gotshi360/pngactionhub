@@ -1,0 +1,14 @@
+version: "1.0"
+
+action:
+  name: "Troubleshooting"
+  id: ap::package::troubleshooting
+  type: package
+  enable: true
+  description: "Debug tools for Anchorpoint: clear settings, reset the local database, restore window layout, and access log files."
+
+  icon:
+    path: icons/troubleshooting.svg
+
+  actions:
+    - ap::troubleshooting::main

@@ -1,0 +1,17 @@
+version: "1.0"
+
+action:
+  name: "Troubleshooting"
+  id: ap::troubleshooting::main
+  type: python
+  script: troubleshooting.py
+  description: "Debug tools: clear settings, reset database, manage window layout, and access log files."
+
+  icon:
+    path: icons/troubleshooting.svg
+
+  register:
+    folder:
+      enable: true
+    file:
+      enable: true
