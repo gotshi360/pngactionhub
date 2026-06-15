@@ -11,7 +11,5 @@ action:
     path: icons/troubleshooting.svg
 
   register:
-    folder:
-      enable: true
-    file:
+    workspace_overview:
       enable: true
