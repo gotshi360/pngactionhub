@@ -2,24 +2,57 @@ import anchorpoint
 import apsync
 import os
 import pathlib
+import time
 
+SETTINGS_NAME = "StatusActions"
 
 # ── Visibility Hook ───────────────────────────────────────────────────────────
+#
+# on_is_action_enabled runs every time a context menu is opened, once per
+# registered action. SharedSettings is cloud backed and get_workspace_access is
+# a lookup, so both are cached per workspace for a short window instead of being
+# hit on every right click. The per-user Settings stays uncached — it is a cheap
+# local read and the toggles have to react immediately.
+
+_ROLE_CACHE_TTL = 30.0
+_visible_to_cache = {}  # workspace_id -> (timestamp, visible_to)
+_access_cache = {}      # workspace_id -> (timestamp, access_str)
+
+
+def _get_visible_to(workspace_id):
+    now = time.monotonic()
+    cached = _visible_to_cache.get(workspace_id)
+    if cached and (now - cached[0]) < _ROLE_CACHE_TTL:
+        return cached[1]
+
+    visible_to = apsync.SharedSettings(workspace_id, SETTINGS_NAME).get("visible_to", "Everyone")
+    _visible_to_cache[workspace_id] = (now, visible_to)
+    return visible_to
+
+
+def _get_access_str(workspace_id):
+    now = time.monotonic()
+    cached = _access_cache.get(workspace_id)
+    if cached and (now - cached[0]) < _ROLE_CACHE_TTL:
+        return cached[1]
+
+    access_str = str(apsync.get_workspace_access(workspace_id)).lower()
+    _access_cache[workspace_id] = (now, access_str)
+    return access_str
+
 
 def on_is_action_enabled(path, type, ctx):
-    local_settings = apsync.Settings("StatusActions")
+    local_settings = apsync.Settings(SETTINGS_NAME)
     if not local_settings.get("show_inprogress", True):
         return False
     return _is_role_allowed(ctx)
 
 
 def _is_role_allowed(ctx):
-    shared_settings = apsync.SharedSettings(ctx.workspace_id, "StatusActions")
-    visible_to = shared_settings.get("visible_to", "Everyone")
+    visible_to = _get_visible_to(ctx.workspace_id)
     if visible_to == "Everyone":
         return True
-    access = apsync.get_workspace_access(ctx.workspace_id)
-    access_str = str(access).lower()
+    access_str = _get_access_str(ctx.workspace_id)
     if visible_to == "Owner only":
         return "owner" in access_str
     if visible_to == "Owner & Admins only":
