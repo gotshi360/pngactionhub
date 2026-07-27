@@ -1,26 +1,57 @@
 import anchorpoint as ap
 import apsync as aps
+import time
 
 SETTINGS_NAME = "GitRepo"
 
 
 # ── Visibility hook ───────────────────────────────────────────────────────────
+#
+# on_is_action_enabled runs every time a folder context menu is opened. The
+# previous version built a cloud-backed SharedSettings object twice per call
+# (once for the show switch, once for the role switches) and looked up the
+# workspace access level on every right click. All of it is now read once and
+# cached per workspace for a short window.
 
-def _is_enabled_for_role(ctx) -> bool:
+_VISIBILITY_CACHE_TTL = 30.0
+_VISIBILITY_KEYS = ("show_lfs_push", "lfs_role_owner", "lfs_role_admin", "lfs_role_member")
+
+_visibility_cache = {}  # workspace_id -> (timestamp, {key: value})
+_access_cache = {}      # workspace_id -> (timestamp, access_str)
+
+
+def _get_visibility(workspace_id) -> dict:
+    now = time.monotonic()
+    cached = _visibility_cache.get(workspace_id)
+    if cached and (now - cached[0]) < _VISIBILITY_CACHE_TTL:
+        return cached[1]
+
+    shared = aps.SharedSettings(workspace_id, SETTINGS_NAME)
+    values = {key: shared.get(key, True) for key in _VISIBILITY_KEYS}
+    _visibility_cache[workspace_id] = (now, values)
+    return values
+
+
+def _get_access_str(workspace_id) -> str:
+    now = time.monotonic()
+    cached = _access_cache.get(workspace_id)
+    if cached and (now - cached[0]) < _VISIBILITY_CACHE_TTL:
+        return cached[1]
+
+    access_str = str(aps.get_workspace_access(workspace_id)).lower()
+    _access_cache[workspace_id] = (now, access_str)
+    return access_str
+
+
+def _is_enabled_for_role(ctx, visibility: dict) -> bool:
     try:
-        shared = aps.SharedSettings(ctx.workspace_id, SETTINGS_NAME)
-        role_owner  = shared.get("lfs_role_owner",  True)
-        role_admin  = shared.get("lfs_role_admin",  True)
-        role_member = shared.get("lfs_role_member", True)
-
-        access = aps.get_workspace_access(ctx.workspace_id)
-        access_str = str(access).lower()
+        access_str = _get_access_str(ctx.workspace_id)
 
         if "owner" in access_str:
-            return bool(role_owner)
+            return bool(visibility.get("lfs_role_owner", True))
         if "admin" in access_str:
-            return bool(role_admin)
-        return bool(role_member)
+            return bool(visibility.get("lfs_role_admin", True))
+        return bool(visibility.get("lfs_role_member", True))
     except Exception as e:
         print(f"[GIT LFS Push] on_is_action_enabled role check failed: {e}")
         return True
@@ -28,10 +59,10 @@ def _is_enabled_for_role(ctx) -> bool:
 
 def on_is_action_enabled(path, type, ctx):
     try:
-        shared = aps.SharedSettings(ctx.workspace_id, SETTINGS_NAME)
-        if not shared.get("show_lfs_push", True):
+        visibility = _get_visibility(ctx.workspace_id)
+        if not visibility.get("show_lfs_push", True):
             return False
-        return _is_enabled_for_role(ctx)
+        return _is_enabled_for_role(ctx, visibility)
     except Exception as e:
         print(f"[GIT LFS Push] on_is_action_enabled failed: {e}")
         return True
