@@ -3,13 +3,6 @@ import apsync
 import re
 import webbrowser
 
-try:
-    import requests
-except ImportError:
-    _ctx = anchorpoint.get_context()
-    _ctx.install("requests")
-    import requests
-
 SETTINGS_NAME    = "ProjectLinks"
 DEFAULT_GDD_BASE = "https://gdds.playngo.com"
 
@@ -28,6 +21,14 @@ def find_gdd_url(asset_number: int, base_url: str):
 
     Returns (url: str | None, error: str | None)
     """
+    # Imported here rather than at module scope: this only runs inside the
+    # async worker, so a missing package never delays loading the action.
+    try:
+        import requests
+    except ImportError:
+        anchorpoint.get_context().install("requests")
+        import requests
+
     index_url  = f"{base_url}/index.json"
     game_id_re = re.compile(r'GameID0*(\d+)', re.IGNORECASE)
 
@@ -75,6 +76,26 @@ def find_gdd_url(asset_number: int, base_url: str):
     )
 
 
+# ── Async worker ──────────────────────────────────────────────────────────────
+
+def lookup_and_open(asset_number: int, base_url: str):
+    """Resolve the GDD URL and open it. Runs off the UI thread — the index
+    request has a 15s timeout and would otherwise freeze Anchorpoint."""
+    progress = anchorpoint.Progress("GDD", f"Looking up GameID {asset_number}…")
+    try:
+        url, error = find_gdd_url(asset_number, base_url)
+    finally:
+        progress.finish()
+
+    ui = anchorpoint.UI()
+    if url:
+        print(f"[GDD] Opening {url}")
+        webbrowser.open(url)
+        ui.show_success("GDD", f"Opened GDD for asset-{asset_number}")
+    else:
+        ui.show_error("GDD – Not Found", error or "No URL found.")
+
+
 # ── Action entry point ────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -103,14 +124,5 @@ if __name__ == "__main__":
     ss       = apsync.SharedSettings(ctx.workspace_id, SETTINGS_NAME)
     base_url = ss.get("gdd_base_url", DEFAULT_GDD_BASE).rstrip("/")
 
-    # ── 3. Find GDD URL ───────────────────────────────────────────────────────
-    progress = anchorpoint.Progress("GDD", f"Looking up GameID {asset_number}…")
-    url, error = find_gdd_url(asset_number, base_url)
-    progress.finish()
-
-    # ── 4. Open or report ─────────────────────────────────────────────────────
-    if url:
-        webbrowser.open(url)
-        ui.show_success("GDD", f"Opened GDD for asset-{asset_number}")
-    else:
-        ui.show_error("GDD – Not Found", error or "No URL found.")
+    # ── 3. Look up and open off the UI thread ─────────────────────────────────
+    ctx.run_async(lookup_and_open, asset_number, base_url)
