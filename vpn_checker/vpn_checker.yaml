@@ -9,7 +9,3 @@ action:
   settings: "vpn_checker_settings.py"
   python_packages:
     - requests
-
-  register:
-    sidebar:
-      enable: false

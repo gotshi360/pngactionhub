@@ -1,10 +1,30 @@
 import anchorpoint as ap
 import apsync
 import time
-import threading
 import requests
 
-ui = ap.UI()
+SETTINGS_NAME = "vpn_checker"
+LOCAL_SETTINGS_NAME = "vpn_checker_local"
+
+# on_timeout fires once a minute, which is the finest granularity available.
+MIN_INTERVAL_SECS = 60.0
+DEFAULT_INTERVAL_SECS = 60
+DEFAULT_URL = "https://gitea.playngo.com"
+
+VPN_HELP_URL = (
+    "https://playngo.sharepoint.com/:b:/s/OnePlaynGO/"
+    "EWoYO4KXq3dCjgAVR3wqu7MBXBiQK_vN6bR6T5c7B-CPCg?e=ESxako"
+)
+
+# Module level state, so it survives between on_timeout calls and is shared
+# across workspaces. That keeps the check running once per interval no matter
+# how many workspaces are open — the previous version started one endless
+# thread per workspace in on_application_started.
+_last_check_t = 0.0
+_was_connected = False
+_notified_disconnected = False
+_logged_disconnected = False
+
 
 def is_vpn_connected(test_url):
     try:
@@ -13,62 +33,63 @@ def is_vpn_connected(test_url):
     except requests.exceptions.RequestException:
         return False
 
-def run_vpn_checker(interval, test_url):
-    print(f"[VPN Checker] Started with interval: {interval} seconds")
-    was_connected_once = False
-    printed_disconnected = False
-    notified_disconnected = False
 
-    while True:
-        local_settings = apsync.Settings("vpn_checker_local")
-        notification_mode = local_settings.get("notification_mode", "Turn on notification")
+def check_vpn():
+    """Runs on a worker thread via ctx.run_async so the blocking request never
+    stalls the UI."""
+    global _was_connected, _notified_disconnected, _logged_disconnected
 
-        connected = is_vpn_connected(test_url)
+    test_url = (apsync.Settings(SETTINGS_NAME).get("vpn_url", DEFAULT_URL) or DEFAULT_URL).strip()
+    notification_mode = apsync.Settings(LOCAL_SETTINGS_NAME).get(
+        "notification_mode", "Turn on notification"
+    )
 
-        if connected and not was_connected_once:
-            msg = "VPN is CONNECTED ✅"
+    ui = ap.UI()
+    connected = is_vpn_connected(test_url)
+
+    if connected:
+        if not _was_connected:
+            print("[VPN Checker] Status changed: VPN is CONNECTED")
             if notification_mode != "Turn off notification":
-                ui.show_info(msg, duration=10000)
-            print(f"[VPN Checker] Status changed: {msg}")
-            was_connected_once = True
-            printed_disconnected = False
-            notified_disconnected = False
+                ui.show_info("VPN is CONNECTED ✅", duration=10000)
+        _was_connected = True
+        _notified_disconnected = False
+        _logged_disconnected = False
+        return
 
-        elif not connected:
-            msg = "VPN is DISCONNECTED ❌"
-            description = (
-                "Please reconnect or <a href='https://playngo.sharepoint.com/:b:/s/OnePlaynGO/EWoYO4KXq3dCjgAVR3wqu7MBXBiQK_vN6bR6T5c7B-CPCg?e=ESxako'>setup VPN</a>.<br>"
-                "Change notification settings in the context menu."
-            )
+    should_notify = (
+        notification_mode == "Turn on notification"
+        or (notification_mode == "Show only once" and not _notified_disconnected)
+    )
+    if should_notify:
+        description = (
+            f"Please reconnect or <a href='{VPN_HELP_URL}'>setup VPN</a>.<br>"
+            "Change notification settings in the context menu."
+        )
+        ui.show_info("VPN is DISCONNECTED ❌", description=description, duration=20000)
+        _notified_disconnected = True
 
-            should_notify = (
-                notification_mode == "Turn on notification"
-                or (notification_mode == "Show only once" and not notified_disconnected)
-            )
+    if not _logged_disconnected:
+        print("[VPN Checker] Status changed: VPN is DISCONNECTED")
+        _logged_disconnected = True
 
-            if should_notify:
-                ui.show_info(msg, description=description, duration=20000)
-                notified_disconnected = True
+    _was_connected = False
 
-            if not printed_disconnected:
-                print(f"[VPN Checker] Status changed: {msg}")
-                printed_disconnected = True
 
-            was_connected_once = False
+def on_timeout(ctx: ap.Context):
+    """Called once a minute by Anchorpoint. Runs the reachability check whenever
+    the configured interval has elapsed."""
+    global _last_check_t
 
-        time.sleep(interval)
+    try:
+        interval = float(apsync.Settings(SETTINGS_NAME).get("interval", DEFAULT_INTERVAL_SECS))
+    except (TypeError, ValueError):
+        interval = DEFAULT_INTERVAL_SECS
+    interval = max(MIN_INTERVAL_SECS, interval)
 
-def start_checker():
-    settings = apsync.Settings("vpn_checker")
-    interval = int(settings.get("interval", 15))
-    test_url = settings.get("vpn_url", "https://gitea.playngo.com").strip()
+    now = time.monotonic()
+    if _last_check_t and (now - _last_check_t) < interval:
+        return
+    _last_check_t = now
 
-    print(f"[VPN Checker] Using interval: {interval} seconds")
-    print(f"[VPN Checker] Testing access to: {test_url}")
-
-    thread = threading.Thread(target=run_vpn_checker, args=(interval, test_url), daemon=True)
-    thread.start()
-
-def on_application_started(ctx: ap.Context):
-    print("[VPN Checker] Triggered on application start")
-    start_checker()
+    ctx.run_async(check_vpn)
