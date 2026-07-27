@@ -1,12 +1,33 @@
 import anchorpoint
 import apsync
+import time
 import webbrowser
 
 SETTINGS_ID = "fpt::project_link::v1"
 
+# on_is_action_enabled decides whether the sidebar button is drawn, so it runs
+# far more often than a context menu hook. SharedSettings is cloud backed, so
+# the two values it needs are cached per project for a short window.
+_SIDEBAR_CACHE_TTL = 30.0
+_sidebar_cache = {}  # (project_id, workspace_id) -> (timestamp, url, show)
+
 
 def _get_settings(ctx):
     return apsync.SharedSettings(ctx.project_id, ctx.workspace_id, SETTINGS_ID)
+
+
+def _get_sidebar_config(ctx):
+    key = (ctx.project_id, ctx.workspace_id)
+    now = time.monotonic()
+    cached = _sidebar_cache.get(key)
+    if cached and (now - cached[0]) < _SIDEBAR_CACHE_TTL:
+        return cached[1], cached[2]
+
+    settings = _get_settings(ctx)
+    url = settings.get("link_url", "")
+    show = settings.get("show_in_sidebar", False)
+    _sidebar_cache[key] = (now, url, show)
+    return url, show
 
 
 def on_is_action_enabled(path, type, ctx):
@@ -14,9 +35,7 @@ def on_is_action_enabled(path, type, ctx):
     if not ctx.project_id or not ctx.workspace_id:
         return False
     try:
-        settings = _get_settings(ctx)
-        url = settings.get("link_url", "")
-        show = settings.get("show_in_sidebar", False)
+        url, show = _get_sidebar_config(ctx)
         return bool(show) and bool(url.strip())
     except Exception as e:
         print(f"FPT Project Link [on_is_action_enabled]: {e}")
