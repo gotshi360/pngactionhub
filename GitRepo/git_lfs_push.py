@@ -70,9 +70,80 @@ def on_is_action_enabled(path, type, ctx):
 
 # ── Async task ────────────────────────────────────────────────────────────────
 
+def _resolve_git():
+    """Return (git_exe, env) usable inside Anchorpoint's action runtime.
+
+    Anchorpoint's Python process does not necessarily have git on PATH, so a
+    bare "git" call dies with [WinError 2]. Prefer Anchorpoint's bundled git
+    plus the official vc environment (credential manager, GIT_EXEC_PATH);
+    fall back to whatever git a PATH lookup finds.
+    """
+    import os
+    import sys
+    import shutil
+
+    env = os.environ.copy()
+
+    try:
+        actions_dir = os.path.join(
+            ap.get_application_dir(), "scripts", "git", "versioncontrol", "actions"
+        )
+        if os.path.isdir(actions_dir) and actions_dir not in sys.path:
+            sys.path.insert(0, actions_dir)
+
+        from vc.apgit_utility import install_git
+        from vc.apgit.repository import GitRepository
+
+        git_exe = install_git.get_git_cmd_path()
+        if os.path.exists(git_exe):
+            env.update(GitRepository.get_git_environment())
+            # git-lfs spawns git itself, so its folder must be on PATH too
+            env["PATH"] = os.path.dirname(git_exe) + os.pathsep + env.get("PATH", "")
+            return git_exe, env
+    except Exception as e:
+        print(f"[GIT LFS Push] vc helpers unavailable, falling back to PATH git: {e}")
+
+    git_exe = shutil.which("git")
+    if not git_exe:
+        raise RuntimeError(
+            "Git executable not found: neither Anchorpoint's bundled git nor "
+            "a system git on PATH is available."
+        )
+    env["PATH"] = os.path.dirname(git_exe) + os.pathsep + env.get("PATH", "")
+    return git_exe, env
+
+
+def _parse_uploaded_files(progress_file: str) -> list:
+    """Collect distinct file names actually uploaded, from the GIT_LFS_PROGRESS log.
+
+    git-lfs writes one line per transfer update in the documented format
+    "<direction> <current>/<total> <bytes>/<total_bytes> <name>", and only
+    objects that are really transferred show up — objects origin already has
+    never appear. Names may contain spaces, hence maxsplit.
+    """
+    uploaded = []
+    seen = set()
+    try:
+        with open(progress_file, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                parts = line.rstrip("\n").split(" ", 3)
+                if len(parts) < 4 or parts[0] != "upload":
+                    continue
+                name = parts[3].strip()
+                if name and name not in seen:
+                    seen.add(name)
+                    uploaded.append(name)
+    except OSError:
+        pass
+    return uploaded
+
+
 def _run_lfs_push(project_path: str):
+    import os
+    import re
     import subprocess
     import sys
+    import tempfile
 
     ui = ap.UI()
     progress = ap.Progress(
@@ -82,13 +153,29 @@ def _run_lfs_push(project_path: str):
         cancelable=False,
         show_loading_screen=True,
     )
+    lfs_progress_path = None
     try:
-        kwargs = dict(capture_output=True, text=True, check=False)
+        git_exe, env = _resolve_git()
+
+        # Machine-readable transfer log: this is how we tell re-uploaded
+        # objects apart from ones origin already had.
+        fd, lfs_progress_path = tempfile.mkstemp(prefix="ap_lfs_push_", suffix=".log")
+        os.close(fd)
+        env["GIT_LFS_PROGRESS"] = lfs_progress_path
+
+        kwargs = dict(
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            env=env,
+        )
         if sys.platform == "win32":
             kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
 
         result = subprocess.run(
-            ["git", "-C", project_path, "lfs", "push", "origin", "--all"],
+            [git_exe, "-C", project_path, "lfs", "push", "origin", "--all"],
             **kwargs,
         )
         stdout = (result.stdout or "").strip()
@@ -100,12 +187,44 @@ def _run_lfs_push(project_path: str):
         if result.returncode != 0:
             raise RuntimeError(stderr or stdout or "git lfs push failed")
 
+        uploaded = _parse_uploaded_files(lfs_progress_path)
+
+        # Fallback for --all pushes of historical objects that no longer map
+        # to a file name: take the count from git's own upload meter.
+        meter_total = 0
+        for m in re.finditer(
+            r"Uploading LFS objects:\s+\d+%\s+\((\d+)/(\d+)\)", stdout + "\n" + stderr
+        ):
+            meter_total = max(meter_total, int(m.group(2)))
+        upload_count = max(len(uploaded), meter_total)
+
         progress.finish()
-        ui.show_success("LFS Push complete", "All LFS objects have been pushed to origin.")
+        if upload_count == 0:
+            ui.show_info(
+                "LFS Push - no changes",
+                "All LFS objects were already present on origin.",
+            )
+        elif uploaded:
+            print(f"[GIT LFS Push] re-uploaded {len(uploaded)} file(s): {', '.join(uploaded)}")
+            shown = "\n".join(uploaded[:10])
+            if len(uploaded) > 10:
+                shown += f"\n... and {len(uploaded) - 10} more (see console log)"
+            ui.show_success(f"LFS Push complete - {len(uploaded)} file(s) uploaded", shown)
+        else:
+            ui.show_success(
+                "LFS Push complete",
+                f"{upload_count} LFS object(s) uploaded to origin.",
+            )
     except Exception as e:
         progress.finish()
         ui.show_error("LFS Push failed", str(e))
         raise
+    finally:
+        if lfs_progress_path:
+            try:
+                os.remove(lfs_progress_path)
+            except OSError:
+                pass
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
